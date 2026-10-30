@@ -1,0 +1,8 @@
+Anti-Janjanator 5000 - Windows interface edition v7
+Renamed executable, window title, interface heading, tray tooltip/menu, and
+Windows file product/title metadata. Discord/Proton refresh behavior unchanged.
+Live status cards, separate close and refresh buttons, disabled refresh until
+verified app exit, account picker, exact backups, and no automatic app restart.
+Embedded proportional header artwork beside the title.
+Matching multi-size application/title-bar icon and a system-tray icon with
+Open Anti-Janjanator 5000 and Exit commands.

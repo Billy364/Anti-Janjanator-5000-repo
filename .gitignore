@@ -1,0 +1,17 @@
+/dist/
+/artifacts/
+/work/
+/bin/
+/obj/
+/.vs/
+*.exe
+*.pdb
+*.zip
+*.user
+*.suo
+UserSettings*.json
+GlobalSettings*.json
+DiscordRuleBackups/
+*.log
+.env
+.env.*
