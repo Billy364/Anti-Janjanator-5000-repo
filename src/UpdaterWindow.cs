@@ -12,8 +12,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyProduct("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyDescription("Discord rules updater for Proton VPN split tunneling")]
-[assembly: System.Reflection.AssemblyVersion("7.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("7.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("8.0.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("8.0.0.0")]
 
 namespace DiscordProtonUpdater
 {
@@ -280,6 +280,8 @@ namespace DiscordProtonUpdater
         public Button RefreshRulesButton { get { return refreshButton; } }
         public AppInspection LastInspection { get { return last; } }
         public UpdaterForm(IUpdaterBackend value)
+            : this(value, null) { }
+        public UpdaterForm(IUpdaterBackend value, JobResult setupResult)
         {
             backend = value; Text = AppIdentity.Name; Name = "DiscordProtonUpdater";
             ClientSize = new Size(900, 792); MinimumSize = new Size(880, 768); StartPosition = FormStartPosition.CenterScreen;
@@ -325,7 +327,10 @@ namespace DiscordProtonUpdater
                 RenderState(); RequestInspection();
             };
             poll.Interval = 1000; poll.Tick += delegate { RequestInspection(); };
-            Shown += delegate { AppendLog("Monitoring the desktop apps. Select the Proton account you want to update."); RequestInspection(); poll.Start(); };
+            Shown += delegate {
+                if (setupResult != null) { AppendLog(setupResult.Message); if (!String.IsNullOrEmpty(setupResult.BackupPath)) AppendLog("First-time setup backups: " + setupResult.BackupPath); }
+                AppendLog("Monitoring the desktop apps. Select the Proton account you want to update."); RequestInspection(); poll.Start();
+            };
             FormClosing += delegate(object sender, FormClosingEventArgs e)
             {
                 if (busy) { e.Cancel = true; footer.Text = "Wait for the current close/refresh operation to finish."; return; }
@@ -504,7 +509,14 @@ namespace DiscordProtonUpdater
         private static void Main()
         {
             Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
-            try { Application.Run(new UpdaterForm(new DesktopBackend(AppDomain.CurrentDomain.BaseDirectory))); }
+            try
+            {
+                DesktopBackend backend = new DesktopBackend(AppDomain.CurrentDomain.BaseDirectory);
+                FirstLaunchSetup setup = new FirstLaunchSetup(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DiscordProtonUpdater"), FirstLaunchSetup.AssertProtonClosed);
+                JobResult result = null;
+                if (setup.IsPending) using (FirstLaunchForm first = new FirstLaunchForm(backend, setup)) { first.ShowDialog(); result = first.Result; }
+                Application.Run(new UpdaterForm(backend, result));
+            }
             catch (Exception error) { MessageBox.Show(error.Message, AppIdentity.Name, MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
     }

@@ -1,4 +1,21 @@
-# Interface validation — October 29, 2026
+# Interface validation — October 30, 2026
+
+V8 adds one-time Proton preference setup. The complete build/test runner passed:
+the original UI policy and eight worker regression groups, plus first-launch
+tests for requested preferences, preserved exclusions/Included apps/opaque data,
+BOM preservation, exact account/global backups, completion and later manual
+changes, running-app rejection, concurrent edits, rollback/retry, marker failure,
+invalid schemas, omitted defaults, existing Brazil exclusions, simultaneous
+instances, and account isolation. First-launch form tests verify waiting for
+Proton exit and requiring an explicit choice on a multi-account PC. Both forms
+were rendered with fixture data and visually checked.
+
+All first-launch write targets and completion records were synthetic fixtures.
+Live account settings and startup registration were not changed by these tests.
+The saved startup preference is registered by Proton on its next normal launch.
+Account entitlements, feature rollout availability, startup across an actual
+reboot, and live VPN routing are not established by this test suite. See
+FIRST-LAUNCH.md for the settings format references and limitations.
 
 V7 renames the app to Anti-Janjanator 5000, including the executable, window
 title, header, tray tooltip/menu, launcher, and Windows product/title metadata.

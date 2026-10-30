@@ -1,4 +1,10 @@
-Anti-Janjanator 5000 - Windows interface edition v7
+Anti-Janjanator 5000 - Windows interface edition v8
+First successful launch per Windows user configures Proton startup and
+auto-connect, Fastest country excluding Brazil, Proton Protocols/Proton
+WireGuard, and Split tunneling in Include mode (subject to Proton support).
+Select an account when more than one is saved; Proton must be exited first.
+Exact backups, guarded atomic writes/rollback, and a persistent completion
+marker prevent overwriting preferences on later launches. Main UI retained.
 Renamed executable, window title, interface heading, tray tooltip/menu, and
 Windows file product/title metadata. Discord/Proton refresh behavior unchanged.
 Live status cards, separate close and refresh buttons, disabled refresh until

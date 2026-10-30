@@ -1,5 +1,18 @@
 # Changelog
 
+## v8
+
+- Added first-launch setup for starting Proton with Windows, auto-connect,
+  Fastest country excluding Brazil, Proton Protocols using Proton WireGuard,
+  and Split tunneling in Include mode where Proton supports it.
+- Wait for Proton's desktop client to exit and require an account selection on
+  PCs with multiple saved accounts. The usual updater opens afterward.
+- Back up changed account/global settings, preserve unrelated values, detect
+  concurrent changes, and roll back partial writes when safe.
+- Record successful setup per Windows user outside the portable app folder;
+  subsequent launches leave the preferences alone, including after app updates.
+- Added first-launch transaction and form regression tests using synthetic data.
+
 ## v7
 
 - Named the app Anti-Janjanator 5000 in its interface, window title, executable,

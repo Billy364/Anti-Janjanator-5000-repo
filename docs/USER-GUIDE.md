@@ -13,10 +13,24 @@ removed when the updater exits.
 
 ## Use
 
+On the first launch, a setup window configures Proton VPN for the selected
+account: start with Windows and auto-connect, Fastest country excluding Brazil,
+Proton Protocols with Proton WireGuard, and Split tunneling in Include mode where
+supported. Exit Proton from its tray icon and choose an account if needed; the
+setup then runs automatically and opens the usual interface. It does not close
+Discord or reconnect the VPN. Reopen Proton afterward so it applies the settings
+and registers startup with Windows.
+
+The completed setup is remembered per Windows user across portable-folder moves
+and app updates. Later launches leave those preferences alone. If setup fails or
+you choose **Continue without setup**, it is retried on a later launch. Details
+and restoration instructions are in FIRST-LAUNCH.md.
+
 1. Check the two status cards. They update automatically while the window is open.
 2. If more than one Proton account is listed, choose the settings file for the
-   account you use. The saved time can help identify it. Enable Proton's Split
-   tunneling in **Include mode** beforehand.
+   account you use. The saved time can help identify it. The account needs Split
+   tunneling in **Include mode**; first-launch setup requests this automatically.
+   If you skipped it or Proton did not enable it, enable it in Proton first.
 3. Click **1. Close both apps**. It closes Discord (including its helpers) and
    the Proton desktop client. It works without selecting a Proton account.
 4. Once both apps are verified as exited, **2. Refresh split tunneling rules**
@@ -66,6 +80,8 @@ backup also restores the other preferences from that time.
 The worker uses the Windows PowerShell 5.1 included with Windows, plus the
 included scripts. The interface uses .NET Framework's Windows Forms. The app
 runs locally, does not upload anything, and installs no scheduled task or service.
+First-time setup changes Proton's own startup preference; Proton registers its
+Windows startup entry when next opened. The updater itself does not run at boot.
 Normally it should run as the same Windows user/privilege level as the two apps.
 If process paths are inaccessible, close the affected app manually.
 

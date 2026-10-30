@@ -21,6 +21,24 @@ Proton's background VPN service stays running. This unofficial utility was
 checked against Proton VPN 5.1.9's settings layout; future versions may differ.
 See the [user guide](docs/USER-GUIDE.md) for setup, backup restoration, and details.
 
+## First launch
+
+The first launch configures Proton VPN once per Windows user: start with Windows
+and connect automatically; Fastest country excluding Brazil; Proton Protocols
+enabled with Proton WireGuard; and Split tunneling enabled in Include mode,
+subject to Proton's account/feature availability. Existing exclusions and
+Included apps are preserved.
+
+Choose an account if more than one is saved, and exit Proton from its tray icon.
+Setup applies automatically once its exit is verified, then opens the same
+updater interface. Reopen Proton afterward to apply the preferences and register
+Windows startup. Discord can stay open during this setup step.
+
+Successful setup is remembered outside the app folder. Future launches and
+newly extracted app versions leave these preferences unchanged. Failed or
+skipped setup remains pending for a later launch. See
+[first-launch details](docs/FIRST-LAUNCH.md) for backups and limitations.
+
 ## Build and run
 
 Requires 64-bit Windows, Windows PowerShell 5.1, and .NET Framework 4.x with its
@@ -34,7 +52,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 Open `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`. Keep the generated
 folder together: the two PowerShell workers are needed at runtime. The build
-also creates `dist\Anti-Janjanator-5000-v7.zip` for sharing. Builds are unsigned.
+also creates `dist\Anti-Janjanator-5000-v8.zip` for sharing. Builds are unsigned.
 
 ## Verify
 
@@ -42,8 +60,8 @@ also creates `dist\Anti-Janjanator-5000-v7.zip` for sharing. Builds are unsigned
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test.ps1
 ```
 
-This builds the app, runs UI policy and synthetic worker tests, and renders the
-form using example data. Tests do not close real Discord/Proton processes or
+This builds the app, runs first-launch, UI policy, and synthetic worker tests,
+and renders the forms using example data. Tests do not close real Discord/Proton processes or
 edit real account settings. Temporary fixtures and previews go in `artifacts/`.
 See [validation notes](docs/VALIDATION.md) for the scope and limitations.
 
@@ -52,6 +70,7 @@ See [validation notes](docs/VALIDATION.md) for the scope and limitations.
 | Path | Purpose |
 | --- | --- |
 | `src/UpdaterWindow.cs` | Windows Forms interface and process inspection |
+| `src/FirstLaunchSetup.cs` | One-time setup form, settings transaction, completion marker |
 | `src/UpdaterWorker.ps1` | Separate close and refresh operations |
 | `src/Update-DiscordRules.ps1` | Discovery, validation, and atomic settings updates |
 | `assets/` | Embedded header PNG and multi-resolution ICO |

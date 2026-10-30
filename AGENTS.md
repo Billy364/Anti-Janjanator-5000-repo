@@ -57,13 +57,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 
 The script compiles the C# interface for x64, embeds the header artwork and ICO,
 copies the required workers and documentation, and creates a portable ZIP.
-For the current v7 source, outputs are:
+For the current v8 source, outputs are:
 
 - `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`
 - `dist\Anti-Janjanator-5000\Open Anti-Janjanator 5000.cmd`
 - `dist\Anti-Janjanator-5000\UpdaterWorker.ps1`
 - `dist\Anti-Janjanator-5000\Update-DiscordRules.ps1`
-- `dist\Anti-Janjanator-5000-v7.zip`
+- `dist\Anti-Janjanator-5000-v8.zip`
 
 Distribute the generated ZIP or the entire app folder, not just the EXE: the
 PowerShell workers must stay beside it. The build is unsigned. The
@@ -84,8 +84,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test.ps1
 if ($LASTEXITCODE -ne 0) { throw 'Tests failed.' }
 ```
 
-The runner rebuilds the app, checks UI button policy, renders the form with a
-fixture backend, and runs eight synthetic worker regression groups. It writes
+The runner rebuilds the app, tests the first-launch transaction/form, checks UI
+button policy, renders the forms with fixture backends, and runs eight synthetic
+worker regression groups. It writes
 unique run folders under `artifacts\tests-<id>\`, including `preview.png`.
 UI rendering needs a Windows environment capable of creating Windows Forms
 controls and a tray icon. Inspect the preview after interface/layout changes.
@@ -107,6 +108,7 @@ documented paths and commands; they do not require another full regression run.
 | Path | Responsibility |
 | --- | --- |
 | `src/UpdaterWindow.cs` | Windows Forms UI, app identity, process inspection, worker bridge |
+| `src/FirstLaunchSetup.cs` | First-launch preferences, transactional backups, marker, setup form |
 | `src/UpdaterWorker.ps1` | Separate Close and Refresh operations |
 | `src/Update-DiscordRules.ps1` | Installation discovery, settings validation, rule planning, atomic writes |
 | `assets/HeaderArtwork.png`, `assets/AppIcon.ico` | Embedded artwork and icons |
@@ -131,6 +133,11 @@ release versions, keep the assembly version, `VERSION.txt`, ZIP name,
   create an exact backup for each actual change. A no-op must not write a backup.
 - Leave the Proton background service running. Do not automatically reopen the
   apps, reconnect the VPN, or claim that UI tests verify VPN traffic routing.
+- First successful launch per Windows user may configure the selected account
+  and global startup preference as described in `docs/FIRST-LAUNCH.md`. Preserve
+  unrelated values and exclusions, require Proton's exit, back up changed files,
+  and write the persistent completion marker only after successful verification.
+  Later launches must skip setup and preserve subsequent manual preferences.
 - Never commit account settings, credentials, backups, request/result records,
   logs, or personal filesystem paths. Keep `dist/` and `artifacts/` ignored.
 
