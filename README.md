@@ -52,7 +52,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 Open `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`. Keep the generated
 folder together: the two PowerShell workers are needed at runtime. The build
-also creates `dist\Anti-Janjanator-5000-v8.zip` for sharing. Builds are unsigned.
+also creates `dist\Anti-Janjanator-5000-v9.zip` for sharing. Builds are unsigned.
 
 ## Verify
 
@@ -64,6 +64,13 @@ This builds the app, runs first-launch, UI policy, and synthetic worker tests,
 and renders the forms using example data. Tests do not close real Discord/Proton processes or
 edit real account settings. Temporary fixtures and previews go in `artifacts/`.
 See [validation notes](docs/VALIDATION.md) for the scope and limitations.
+
+If a newly signed-in account has no saved split-tunneling settings yet, the app
+now shows whether Split tunneling is off or still uses Exclude mode. Enable
+Include mode in Proton, apply it, and exit Proton before refreshing. An omitted
+Included-app list can be created by Refresh once Include mode is enabled. See
+[troubleshooting](docs/TROUBLESHOOTING.md) for the former unsupported-format error
+and uncertain process status.
 
 ## Repository layout
 

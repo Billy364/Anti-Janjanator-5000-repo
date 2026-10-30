@@ -153,7 +153,7 @@ namespace DiscordProtonUpdater
         private static void CheckBool(SettingsFile file, string key)
         {
             string value = file.Get(key);
-            if (file.Values.ContainsKey(key) && value != "true" && value != "false") throw new IOException("Unsupported " + key + " representation.");
+            if (value != null && value != "true" && value != "false") throw new IOException("Unsupported " + key + " representation.");
         }
         public JobResult Apply(string accountPath)
         {
@@ -169,7 +169,8 @@ namespace DiscordProtonUpdater
                     throw new IOException("Select a Proton UserSettings account file.");
                 SettingsFile user = new SettingsFile(full);
                 SettingsFile global = new SettingsFile(Path.Combine(Path.GetDirectoryName(full), "GlobalSettings.json"));
-                if (!user.Values.ContainsKey("IsUserSettingsMigrationDone") || user.Get("IsUserSettingsMigrationDone") != "true" || !global.Values.ContainsKey("FeatureFlags"))
+                bool knownGlobal = global.Values.ContainsKey("FeatureFlags") || global.Values.ContainsKey("UserId") || global.Values.ContainsKey("Language") || global.Values.ContainsKey("IsAutoLaunchEnabled");
+                if (!user.Values.ContainsKey("IsUserSettingsMigrationDone") || user.Get("IsUserSettingsMigrationDone") != "true" || !knownGlobal)
                     throw new IOException("Unsupported or unfinished Proton settings. Sign in to Proton and let it finish setting up first.");
                 CheckBool(global, "IsAutoLaunchEnabled"); CheckBool(user, "IsAutoConnectEnabled");
                 CheckBool(user, "AreProtonProtocolsEnabled"); CheckBool(user, "IsSplitTunnelingEnabled");

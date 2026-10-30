@@ -57,13 +57,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 
 The script compiles the C# interface for x64, embeds the header artwork and ICO,
 copies the required workers and documentation, and creates a portable ZIP.
-For the current v8 source, outputs are:
+For the current v9 source, outputs are:
 
 - `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`
 - `dist\Anti-Janjanator-5000\Open Anti-Janjanator 5000.cmd`
 - `dist\Anti-Janjanator-5000\UpdaterWorker.ps1`
 - `dist\Anti-Janjanator-5000\Update-DiscordRules.ps1`
-- `dist\Anti-Janjanator-5000-v8.zip`
+- `dist\Anti-Janjanator-5000-v9.zip`
 
 Distribute the generated ZIP or the entire app folder, not just the EXE: the
 PowerShell workers must stay beside it. The build is unsigned. The
@@ -85,8 +85,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Tests failed.' }
 ```
 
 The runner rebuilds the app, tests the first-launch transaction/form, checks UI
-button policy, renders the forms with fixture backends, and runs eight synthetic
-worker regression groups. It writes
+button policy, tests sparse settings and process-scan races, renders the forms
+with fixture backends, and runs the synthetic worker regressions. It writes
 unique run folders under `artifacts\tests-<id>\`, including `preview.png`.
 UI rendering needs a Windows environment capable of creating Windows Forms
 controls and a tray icon. Inspect the preview after interface/layout changes.
@@ -131,6 +131,11 @@ release versions, keep the assembly version, `VERSION.txt`, ZIP name,
   process path or incomplete scan must not permit a partial refresh.
 - Preserve unrelated Included apps and settings, detect concurrent changes, and
   create an exact backup for each actual change. A no-op must not write a backup.
+- Proton can omit default preference keys. Treat missing enabled/mode values as
+  off/Standard and give setup guidance. If Include mode is explicitly enabled,
+  Refresh may create an omitted/null saved Included-app list. Do not enable or
+  change the VPN mode during a normal Refresh. Reject stale process inspections
+  from before Close and ignore processes that exit during image lookup.
 - Leave the Proton background service running. Do not automatically reopen the
   apps, reconnect the VPN, or claim that UI tests verify VPN traffic routing.
 - First successful launch per Windows user may configure the selected account

@@ -37,6 +37,13 @@ and restoration instructions are in FIRST-LAUNCH.md.
    becomes available. Click it to update the selected account's Included apps.
 5. Open Proton VPN yourself and reconnect, then reopen Discord.
 
+Newly signed-in accounts may omit default settings. This is supported: the app
+shows off/Exclude mode guidance rather than treating omitted keys as an unknown
+format. If Include mode is enabled but its list has never been saved, Refresh
+creates the list. It does not silently enable or change your VPN mode. See
+TROUBLESHOOTING.md if a previous version showed Unsupported Proton settings
+format or the status remains unverified after shutdown.
+
 The buttons stay disabled during an operation. Refresh also stays disabled when
 process status is uncertain, a Discord scan is incomplete, or no compatible
 account is selected. Two consecutive clear status checks are required before

@@ -6,14 +6,15 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Runtime.InteropServices;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
 [assembly: System.Reflection.AssemblyTitle("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyProduct("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyDescription("Discord rules updater for Proton VPN split tunneling")]
-[assembly: System.Reflection.AssemblyVersion("8.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("8.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("9.0.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("9.0.0.0")]
 
 namespace DiscordProtonUpdater
 {
@@ -41,6 +42,7 @@ namespace DiscordProtonUpdater
         public string ScanDetail = "Checking installations...";
         public List<string> Roots = new List<string>();
         public List<AccountInfo> Accounts = new List<AccountInfo>();
+        public List<string> UnverifiedProcesses = new List<string>();
         public bool AppsExited { get { return Known && DiscordCount == 0 && ProtonCount == 0 && UnknownCount == 0; } }
     }
     public sealed class OperationRequest
@@ -101,8 +103,52 @@ namespace DiscordProtonUpdater
             foreach (string root in roots) if (path.StartsWith(root.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase)) return true;
             return false;
         }
-        private static string Image(Process process)
-        { try { return process.MainModule.FileName; } catch { return null; } }
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(uint access, bool inherit, int processId);
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern bool QueryFullProcessImageNameW(IntPtr process, uint flags, StringBuilder path, ref uint length);
+        [DllImport("kernel32.dll")]
+        private static extern bool CloseHandle(IntPtr handle);
+        public static string Image(Process process)
+        {
+            IntPtr handle = IntPtr.Zero;
+            try
+            {
+                // Querying the image needs less access than enumerating modules.
+                handle = OpenProcess(0x1000, false, process.Id);
+                if (handle != IntPtr.Zero)
+                {
+                    StringBuilder path = new StringBuilder(32768); uint length = (uint)path.Capacity;
+                    if (QueryFullProcessImageNameW(handle, 0, path, ref length)) return path.ToString();
+                }
+            }
+            catch { }
+            finally { if (handle != IntPtr.Zero) CloseHandle(handle); }
+            try { return process.MainModule.FileName; } catch { return null; }
+        }
+        public static void ObserveProcess(AppInspection state, string name, int session, Func<bool> hasExited, Func<int> sessionId, Func<string> readImage)
+        {
+            try
+            {
+                if (hasExited() || sessionId() != session) return;
+                string image = readImage();
+                // A shutdown may complete between enumeration and image lookup.
+                if (hasExited()) return;
+                if (IsProtonName(name)) state.ProtonCount++;
+                else if (IsDiscordName(name) || Under(image, state.Roots)) state.DiscordCount++;
+                if (image == null)
+                {
+                    state.UnknownCount++;
+                    if (!state.UnverifiedProcesses.Contains(name)) state.UnverifiedProcesses.Add(name);
+                }
+            }
+            catch
+            {
+                try { if (hasExited()) return; } catch { }
+                state.Known = false;
+                if (!state.UnverifiedProcesses.Contains(name)) state.UnverifiedProcesses.Add(name);
+            }
+        }
         private static string ReadSharedText(string path)
         {
             using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
@@ -117,7 +163,7 @@ namespace DiscordProtonUpdater
         }
         public void AddAccount(string path)
         { lock (sync) extraAccounts.Add(System.IO.Path.GetFullPath(path)); }
-        private static AccountInfo ReadAccount(string path)
+        public static AccountInfo ReadAccount(string path)
         {
             AccountInfo account = new AccountInfo(); account.Path = path;
             account.Display = System.IO.Path.GetFileName(path) + "  |  saved " + File.GetLastWriteTime(path).ToString("yyyy-MM-dd HH:mm:ss");
@@ -125,11 +171,21 @@ namespace DiscordProtonUpdater
             {
                 if (new FileInfo(path).Length > 8 * 1024 * 1024) throw new InvalidOperationException();
                 Dictionary<string, object> data = Json().DeserializeObject(ReadSharedText(path)) as Dictionary<string, object>;
-                if (data == null || !data.ContainsKey("SplitTunnelingInverseAppsList") || !data.ContainsKey("IsSplitTunnelingEnabled") || !data.ContainsKey("SplitTunnelingMode"))
+                if (data == null || !(data.ContainsKey("IsUserSettingsMigrationDone") || data.ContainsKey("VpnProtocol") || data.ContainsKey("IsSplitTunnelingEnabled") || data.ContainsKey("SplitTunnelingMode") || data.ContainsKey("SplitTunnelingInverseAppsList")))
                 { account.Detail = "Unsupported Proton settings format."; return account; }
-                account.Ready = String.Equals(Convert.ToString(data["IsSplitTunnelingEnabled"], CultureInfo.InvariantCulture), "true", StringComparison.OrdinalIgnoreCase) &&
-                    String.Equals(Convert.ToString(data["SplitTunnelingMode"], CultureInfo.InvariantCulture), "Inverse", StringComparison.OrdinalIgnoreCase);
-                account.Detail = account.Ready ? "Include mode is enabled. This account is ready." : "Enable Split tunneling > Include mode in Proton and apply it first.";
+                object enabledValue, modeValue, appsValue;
+                data.TryGetValue("IsSplitTunnelingEnabled", out enabledValue); data.TryGetValue("SplitTunnelingMode", out modeValue); data.TryGetValue("SplitTunnelingInverseAppsList", out appsValue);
+                if ((enabledValue != null && !(enabledValue is string)) || (modeValue != null && !(modeValue is string)) || (appsValue != null && !(appsValue is string)))
+                { account.Detail = "Unsupported Proton preference encoding."; return account; }
+                string enabled = enabledValue as string ?? "false", mode = modeValue as string ?? "Standard";
+                if ((enabled != "true" && enabled != "false") || (mode != "Standard" && mode != "Inverse"))
+                { account.Detail = "Unsupported Proton split tunneling values."; return account; }
+                if (appsValue != null && !(Json().DeserializeObject((string)appsValue) is object[]))
+                { account.Detail = "Included apps is not a valid list. Apply Include mode in Proton again."; return account; }
+                account.Ready = enabled == "true" && mode == "Inverse";
+                account.Detail = enabled != "true" ? "Split tunneling is off for this account. In Proton, enable Split tunneling > Include mode and Apply, then exit Proton." :
+                    mode != "Inverse" ? "This account uses Exclude mode. In Proton, select Include mode and Apply, then exit Proton." :
+                    appsValue == null ? "Include mode is enabled. No saved list yet; Refresh will create the Discord entries." : "Include mode is enabled. This account is ready.";
             }
             catch { account.Detail = "Settings could not be read. Reload after Proton finishes saving, or choose another file."; account.Ready = false; }
             return account;
@@ -209,16 +265,7 @@ namespace DiscordProtonUpdater
                 {
                     using (process)
                     {
-                        try
-                        {
-                            if (process.SessionId != session) continue;
-                            string image = Image(process);
-                            if (IsProtonName(name)) { result.ProtonCount++; if (image == null) result.UnknownCount++; }
-                            else if (IsDiscordName(name)) { result.DiscordCount++; if (image == null) result.UnknownCount++; }
-                            else if (Under(image, result.Roots)) result.DiscordCount++;
-                            else if (image == null) result.UnknownCount++;
-                        }
-                        catch { try { if (!process.HasExited) result.Known = false; } catch { result.Known = false; } }
+                        ObserveProcess(result, name, session, delegate { return process.HasExited; }, delegate { return process.SessionId; }, delegate { return Image(process); });
                     }
                 }
             }
@@ -263,6 +310,7 @@ namespace DiscordProtonUpdater
         private bool busy;
         private bool bindingAccounts;
         private bool closing;
+        private int inspectionGeneration, pendingInspectionGeneration;
         private string successText;
         private Label protonStatus, discordStatus, protonDetail, discordDetail, warning, scanDetail, accountDetail, footer;
         private ComboBox accounts;
@@ -301,6 +349,7 @@ namespace DiscordProtonUpdater
             inspection.RunWorkerCompleted += delegate(object sender, RunWorkerCompletedEventArgs e)
             {
                 if (closing || IsDisposed) return;
+                if (busy || pendingInspectionGeneration != inspectionGeneration) { if (!busy) RequestInspection(); return; }
                 if (e.Error != null) { last = new AppInspection(); last.Known = false; last.ScanDetail = "Could not inspect apps: " + e.Error.Message; }
                 else last = (AppInspection)e.Result;
                 clearPolls = last.AppsExited ? Math.Min(3, clearPolls + 1) : 0;
@@ -315,7 +364,8 @@ namespace DiscordProtonUpdater
             };
             operation.RunWorkerCompleted += delegate(object sender, RunWorkerCompletedEventArgs e)
             {
-                busy = false; clearPolls = 0;
+                busy = false; clearPolls = 0; inspectionGeneration++;
+                last = new AppInspection { Known = false, ScanDetail = "Rechecking app exit and account settings..." };
                 JobResult result = e.Error == null ? (JobResult)e.Result : new JobResult { Success = false, Message = e.Error.Message };
                 if (result.Success)
                 {
@@ -434,7 +484,8 @@ namespace DiscordProtonUpdater
             footer = Label("Desktop clients and Discord helpers are monitored. Proton's background service is left running.", 8.5F, false); footer.ForeColor = muted; main.Controls.Add(footer, 0, 7); Controls.Add(main);
             RenderState();
         }
-        private void RequestInspection() { if (!closing && !inspection.IsBusy) inspection.RunWorkerAsync(); }
+        private void RequestInspection()
+        { if (!closing && !busy && !inspection.IsBusy) { pendingInspectionGeneration = inspectionGeneration; inspection.RunWorkerAsync(); } }
         private AccountInfo SelectedAccount { get { return accounts.SelectedItem as AccountInfo; } }
         private void BindAccounts()
         {
@@ -476,7 +527,7 @@ namespace DiscordProtonUpdater
             tips.SetToolTip(accounts, account == null ? "" : account.Path);
             string text;
             if (busy) text = "Working... The buttons stay locked until the current operation finishes.";
-            else if (!last.Known || last.UnknownCount > 0) text = "App status cannot be fully verified. Refresh is locked. Close any inaccessible apps manually, then reload.";
+            else if (!last.Known || last.UnknownCount > 0) text = last.UnverifiedProcesses.Count > 0 ? "Cannot verify process paths: " + String.Join(", ", last.UnverifiedProcesses.ToArray()) + ". Refresh stays locked." : "App status cannot be fully verified. Refresh is locked. Close any inaccessible apps manually, then reload.";
             else if (!last.AppsExited) text = "Apps are running. Click Close both apps; Refresh unlocks only after all matching processes have exited.";
             else if (clearPolls < 2) text = "Confirming both apps have fully exited...";
             else if (!last.ScanReady) text = last.ScanDetail;
@@ -493,7 +544,7 @@ namespace DiscordProtonUpdater
             if (action == "Refresh" && !UiPolicy.CanRefresh(last, clearPolls, false, SelectedAccount)) return;
             if (action == "Close" && !UiPolicy.CanClose(last, false)) return;
             OperationRequest request = new OperationRequest { Action = action, SettingsPath = SelectedAccount == null ? null : SelectedAccount.Path, Roots = new List<string>(last.Roots) };
-            busy = true; successText = null; clearPolls = 0;
+            busy = true; successText = null; clearPolls = 0; inspectionGeneration++;
             AppendLog(action == "Close" ? "Closing Discord and the Proton VPN desktop client..." : "Rechecking app exit and refreshing the selected account's rules...");
             RenderState(); operation.RunWorkerAsync(request);
         }

@@ -1,5 +1,17 @@
 # Changelog
 
+## v9
+
+- Fixed the unsupported-format message for accounts whose default Proton
+  preference keys have not been saved yet. Show off/Exclude mode guidance.
+- Allow Refresh to create an omitted/null saved Included-app list when Include
+  mode is explicitly enabled, with exact backups and unrelated bytes preserved.
+- Accept omitted feature flags and null default toggles during first-time setup.
+- Ignore processes that exit during image lookup and use a limited-rights native
+  query before falling back to module inspection. Name unreadable processes.
+- Discard stale inspections from before Close and require fresh clear checks.
+- Added sparse-settings, exit-race, native path lookup, and delayed-scan tests.
+
 ## v8
 
 - Added first-launch setup for starting Proton with Windows, auto-connect,

@@ -91,3 +91,32 @@ Assert-True (@(Get-DiscordAppProcesses @($root) @(Get-DiscordInventory @($root))
 Assert-True (@(Get-ProtonAppProcesses).Count -eq 0) 'Exited Proton record caused an image-path error.'
 Assert-DesktopAppsExited @($root)
 Write-Output 'PASS: Processes that exit between enumeration and image lookup are treated as exited, not as access failures.'
+
+$script:fakeProcesses=@()
+foreach ($kind in @('missing','null')) {
+    $sparseFile=Join-Path $RunFolder ('UserSettings.'+$kind+'.json')
+    $sparseText='{"KeepMe"  :  "keep\u0020exact","IsSplitTunnelingEnabled":"true","SplitTunnelingMode":"Inverse"}'
+    if($kind -eq 'null') { $sparseText=$sparseText.Insert($sparseText.Length-1, ',"SplitTunnelingInverseAppsList":null') }
+    [IO.File]::WriteAllText($sparseFile,$sparseText,(New-Object Text.UTF8Encoding($true)))
+    $before=[IO.File]::ReadAllBytes($sparseFile)
+    $sparseResult=Invoke-InterfaceOperation ([pscustomobject]@{Action='Refresh';SettingsPath=$sparseFile;Roots=@($root)})
+    Assert-True ($sparseResult.Success -and $sparseResult.Total -eq 2) 'Omitted/null list refresh failed.'
+    Assert-True ([Convert]::ToBase64String([IO.File]::ReadAllBytes($sparseResult.BackupPath)) -ceq [Convert]::ToBase64String($before)) 'Sparse settings backup differs.'
+    $newText=[IO.File]::ReadAllText($sparseFile)
+    Assert-True ($newText.Contains('"KeepMe"  :  "keep\u0020exact"') -and [IO.File]::ReadAllBytes($sparseFile)[0] -eq 239) 'Sparse refresh changed unrelated bytes or BOM.'
+    $second=Invoke-InterfaceOperation ([pscustomobject]@{Action='Refresh';SettingsPath=$sparseFile;Roots=@($root)})
+    Assert-True ($second.Success -and $null -eq $second.BackupPath) 'Second sparse refresh was not a no-op.'
+}
+Write-Output 'PASS: Missing/null Included app lists are created with exact backups, preserved bytes/BOM, and a repeat no-op.'
+
+foreach ($minimal in @('{"IsUserSettingsMigrationDone":"true"}','{"IsSplitTunnelingEnabled":"true"}')) {
+    $minimalFile=Join-Path $RunFolder 'UserSettings.defaults.json';[IO.File]::WriteAllText($minimalFile,$minimal)
+    Assert-Rejected { & $script:originalReader $minimalFile } 'Enable Split tunneling in Include mode'
+    Assert-True ([IO.File]::ReadAllText($minimalFile) -ceq $minimal) 'Default off/Standard mode was silently enabled.'
+}
+Write-Output 'PASS: Omitted off/Standard defaults produce setup guidance without changing VPN mode.'
+
+$duplicateFile=Join-Path $RunFolder 'UserSettings.duplicate.json'
+[IO.File]::WriteAllText($duplicateFile,'{"IsSplitTunnelingEnabled":"true","SplitTunnelingMode":"Inverse","SplitTunnelingInverseAppsList":"[]","SplitTunnelingInverseAppsList":"[]"}')
+Assert-Rejected { & $script:originalReader $duplicateFile } 'Duplicate or ambiguous'
+Write-Output 'PASS: Duplicate settings properties remain rejected.'

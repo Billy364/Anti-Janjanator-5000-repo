@@ -9,12 +9,13 @@ $run = Join-Path $repository ('artifacts\tests-' + [Guid]::NewGuid().ToString('N
 $app = Join-Path $repository 'dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe'
 Copy-Item -LiteralPath $app -Destination $run
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-foreach ($name in @('GuiPolicyTests','HeaderPreview','FirstLaunchSetupTests')) {
+foreach ($name in @('GuiPolicyTests','HeaderPreview','FirstLaunchSetupTests','CompatibilityTests')) {
     $test = Join-Path $run ($name + '.exe')
     & $compiler /nologo /target:exe /platform:x64 "/out:$test" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll "/reference:$app" (Join-Path $repository "tests\$name.cs")
     if ($LASTEXITCODE -ne 0) { throw "Failed to compile $name." }
     if ($name -eq 'HeaderPreview') { & $test (Join-Path $run 'preview.png') }
     elseif ($name -eq 'FirstLaunchSetupTests') { & $test (Join-Path $run 'first-launch') }
+    elseif ($name -eq 'CompatibilityTests') { & $test (Join-Path $run 'compat') }
     else { & $test }
     if ($LASTEXITCODE -ne 0) { throw "$name failed." }
 }

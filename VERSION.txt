@@ -1,4 +1,8 @@
-Anti-Janjanator 5000 - Windows interface edition v8
+Anti-Janjanator 5000 - Windows interface edition v9
+Recognizes omitted Proton default settings and explains off/Exclude mode.
+Refresh can create a missing/null saved Include list without changing VPN mode.
+Process image lookup uses limited query rights, ignores exited processes, and
+discards pre-operation inspection results after closing the apps.
 First successful launch per Windows user configures Proton startup and
 auto-connect, Fastest country excluding Brazil, Proton Protocols/Proton
 WireGuard, and Split tunneling in Include mode (subject to Proton support).

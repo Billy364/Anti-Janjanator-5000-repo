@@ -125,6 +125,13 @@ class FirstLaunchSetupTests
         Check((string)Read(defaults.Account)["SplitTunnelingInverseAppsList"] == "[]", "Missing default list not initialized.");
         Console.WriteLine("PASS: Omitted default preference keys are added with Proton's string encoding.");
 
+        Fixture sparseGlobal = new Fixture(root, "sparse-global", false);
+        File.WriteAllText(sparseGlobal.Global, "{\"UserId\":\"synthetic opaque identity\",\"IsAutoLaunchEnabled\":null}");
+        Set(sparseGlobal.Account, "IsAutoConnectEnabled", null);
+        sparseGlobal.Service(delegate { }).Apply(sparseGlobal.Account);
+        Check((string)Read(sparseGlobal.Global)["UserId"] == "synthetic opaque identity" && (string)Read(sparseGlobal.Global)["IsAutoLaunchEnabled"] == "true", "Omitted global defaults or null toggles were rejected.");
+        Console.WriteLine("PASS: First-launch setup accepts omitted feature flags and null default toggles without changing opaque identity data.");
+
         Fixture locked = new Fixture(root, "locked", false); Directory.CreateDirectory(locked.State);
         using (FileStream gate = new FileStream(Path.Combine(locked.State, "FirstLaunchSetup.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
             Reject(delegate { locked.Service(delegate { }).Apply(locked.Account); });

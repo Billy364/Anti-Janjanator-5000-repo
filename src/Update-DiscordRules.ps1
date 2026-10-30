@@ -145,26 +145,37 @@ function Read-ProtonSettings {
     $encoding = New-Object Text.UTF8Encoding($false, $true)
     $text = $encoding.GetString($bytes)
     if ($hasBom) { $text = $text.Substring(1) }
-    $settings = $text | ConvertFrom-Json
-    foreach ($name in @('SplitTunnelingInverseAppsList', 'IsSplitTunnelingEnabled', 'SplitTunnelingMode')) {
-        if ($null -eq $settings.PSObject.Properties[$name]) {
-            throw "Unsupported settings schema: missing $name."
-        }
+    try { $settings = $text | ConvertFrom-Json } catch { throw 'Settings JSON could not be read. Let Proton finish saving and retry.' }
+    if ($null -eq $settings -or $settings -isnot [pscustomobject]) { throw 'Unsupported Proton settings format.' }
+    # Proton omits keys whose values still use defaults. Missing flags are off,
+    # the default mode is Standard, and an omitted app list has no saved entries.
+    $enabled = 'false'; $mode = 'Standard'; $appsJson = '[]'
+    foreach ($property in $settings.PSObject.Properties) {
+        if ($null -ne $property.Value -and $property.Value -isnot [string]) { throw 'Unsupported Proton preference encoding.' }
     }
-    if ([string]$settings.IsSplitTunnelingEnabled -ine 'true' -or
-        [string]$settings.SplitTunnelingMode -ine 'Inverse') {
+    $entries = [regex]::Matches($text, '(?<key>"(?:\\.|[^"\\])*")\s*:\s*(?<value>"(?:\\.|[^"\\])*"|null)')
+    $keys = @{}
+    foreach ($entry in $entries) {
+        $key = $entry.Groups['key'].Value | ConvertFrom-Json
+        if ($keys.ContainsKey($key)) { throw 'Duplicate or ambiguous Proton settings property.' }
+        $keys[$key] = $entry
+    }
+    if ($entries.Count -ne @($settings.PSObject.Properties).Count) { throw 'Unsupported Proton settings structure.' }
+    if ($null -ne $settings.PSObject.Properties['IsSplitTunnelingEnabled'] -and $null -ne $settings.IsSplitTunnelingEnabled) { $enabled = [string]$settings.IsSplitTunnelingEnabled }
+    if ($null -ne $settings.PSObject.Properties['SplitTunnelingMode'] -and $null -ne $settings.SplitTunnelingMode) { $mode = [string]$settings.SplitTunnelingMode }
+    if ($enabled -notin @('true','false') -or $mode -notin @('Standard','Inverse')) { throw 'Unsupported Proton split tunneling values.' }
+    if ($enabled -ine 'true' -or $mode -ine 'Inverse') {
         throw 'Enable Split tunneling in Include mode in Proton first. The updater does not change your VPN mode.'
     }
-    if ($settings.SplitTunnelingInverseAppsList -isnot [string] -or
-        $settings.SplitTunnelingInverseAppsList.Trim() -notmatch '^\[') {
+    if ($null -ne $settings.PSObject.Properties['SplitTunnelingInverseAppsList'] -and $null -ne $settings.SplitTunnelingInverseAppsList) { $appsJson = $settings.SplitTunnelingInverseAppsList }
+    if ($appsJson.Trim() -notmatch '^\[') {
         throw 'Unsupported Included apps representation; expected a JSON array stored as a string.'
     }
-    $pattern = '"SplitTunnelingInverseAppsList"\s*:\s*("(?:\\.|[^"\\])*")'
-    $matches = [regex]::Matches($text, $pattern)
-    if ($matches.Count -ne 1) { throw 'Included apps property is missing or ambiguous.' }
+    $valueMatch = $null
+    if ($keys.ContainsKey('SplitTunnelingInverseAppsList')) { $valueMatch = $keys['SplitTunnelingInverseAppsList'].Groups['value'] }
     # Windows PowerShell 5.1 emits a JSON array as one pipeline object; newer
     # PowerShell enumerates it. Assign first so both produce the same app list.
-    $decodedApps = $settings.SplitTunnelingInverseAppsList | ConvertFrom-Json
+    try { $decodedApps = $appsJson | ConvertFrom-Json } catch { throw 'Included apps JSON is invalid. Reapply Include mode in Proton.' }
     $apps = @()
     if ($null -ne $decodedApps) { $apps = @($decodedApps) }
     foreach ($app in $apps) {
@@ -180,7 +191,7 @@ function Read-ProtonSettings {
     }
     return [pscustomobject]@{
         Path = $fullPath; Bytes = $bytes; Text = $text; HasBom = $hasBom
-        ValueMatch = $matches[0].Groups[1]; Apps = $apps
+        ValueMatch = $valueMatch; Apps = $apps
     }
 }
 
@@ -229,8 +240,13 @@ function New-DiscordRulePlan {
     # Replace only the Included apps string. All other bytes/preferences are retained.
     $encodedValue = ConvertTo-Json -InputObject $newCanonical -Compress
     $value = $Snapshot.ValueMatch
-    $newText = $Snapshot.Text.Substring(0, $value.Index) + $encodedValue +
-        $Snapshot.Text.Substring($value.Index + $value.Length)
+    if ($null -eq $value) {
+        $end = $Snapshot.Text.LastIndexOf('}')
+        $newText = $Snapshot.Text.Insert($end, ',"SplitTunnelingInverseAppsList":' + $encodedValue)
+    } else {
+        $newText = $Snapshot.Text.Substring(0, $value.Index) + $encodedValue +
+            $Snapshot.Text.Substring($value.Index + $value.Length)
+    }
     $encoding = New-Object Text.UTF8Encoding($false)
     [byte[]]$newBytes = $encoding.GetBytes($newText)
     if ($Snapshot.HasBom) { $newBytes = [byte[]](@(239, 187, 191) + $newBytes) }

@@ -1,5 +1,21 @@
 # Interface validation — October 30, 2026
 
+V9 passed the complete runner with additional sparse-settings and process-race
+coverage. Account-reader fixtures check omitted off/Standard defaults, disabled
+and Exclude modes, missing/null/empty Include lists, and unsupported types/values.
+The worker creates absent/null lists with byte-exact backups, retained BOM and
+unrelated text, then performs a no-op on repeat. It rejects duplicate properties
+and never enables off/Standard mode during normal Refresh. First-time setup also
+accepts omitted global feature flags and null default toggles.
+
+Process tests cover exit during image lookup, unreadable live processes, other
+Windows sessions, and a native limited-rights query for the test process. A form
+test holds a pre-Close scan until shutdown has completed, then verifies its old
+result is discarded and two fresh clear polls unlock Refresh. The original
+policy, first-launch, image/icon, and worker tests also pass. All write targets
+are synthetic; the friend's actual settings file was not available, so these
+tests do not establish the exact missing key or restart cause on that PC.
+
 V8 adds one-time Proton preference setup. The complete build/test runner passed:
 the original UI policy and eight worker regression groups, plus first-launch
 tests for requested preferences, preserved exclusions/Included apps/opaque data,
