@@ -44,6 +44,31 @@ re-enable Include mode; it leaves the other first-launch preferences alone.
 Failed or canceled setup remains pending for a later launch. See
 [first-launch details](docs/FIRST-LAUNCH.md) for backups and limitations.
 
+## One-command build and Desktop shortcut
+
+With Git for Windows installed, run this in Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/Billy364/Anti-Janjanator-5000-repo/main/install.ps1 | iex
+```
+
+This downloads and executes the bootstrap script. It clones into
+`%LOCALAPPDATA%\Programs\Democracy-Enforcer-5000\source`, builds using Windows
+PowerShell 5.1 and .NET Framework, and creates **Democracy Enforcer 5000 - App
+Folder** on your Desktop (including a redirected/OneDrive Desktop). Open the
+shortcut and launch the EXE when ready. The bootstrap does not launch the app,
+modify Proton settings, request administrator access, or change machine-wide
+execution policy. First launch of the app still performs the setup described above.
+
+Rerunning fast-forwards a clean installation checkout and rebuilds it; local
+changes, a different origin/branch, or divergent history stop the update.
+Close a running copy before rebuilding. Git and the .NET compiler must already
+be installed; the bootstrap does not install prerequisites.
+
+To inspect before running, download `install.ps1` and read it first. The saved
+script also accepts `-InstallDirectory`, `-ShortcutDirectory`, `-RepositoryUrl`,
+and `-Branch` for custom locations and branch testing.
+
 ## Build and run
 
 Requires 64-bit Windows, Windows PowerShell 5.1, and .NET Framework 4.x with its
