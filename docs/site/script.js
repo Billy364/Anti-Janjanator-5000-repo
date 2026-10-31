@@ -4,11 +4,11 @@ copyButton.addEventListener('click', async () => {
   const commands = document.querySelector('#commands').textContent;
   try {
     await navigator.clipboard.writeText(commands);
-    copyStatus.textContent = 'Commands copied. Run them in Windows PowerShell.';
+    copyStatus.textContent = 'Command copied. Paste it into Windows PowerShell and press Enter.';
     copyButton.textContent = 'COPIED ✓';
-    setTimeout(() => { copyButton.textContent = 'COPY COMMANDS ▣'; }, 2500);
+    setTimeout(() => { copyButton.textContent = 'COPY COMMAND ▣'; }, 2500);
   } catch {
-    copyStatus.textContent = 'Select the commands above and copy them manually.';
+    copyStatus.textContent = 'Select the command above and copy it manually.';
     const selection = window.getSelection();
     const range = document.createRange();
     range.selectNodeContents(document.querySelector('#commands'));
