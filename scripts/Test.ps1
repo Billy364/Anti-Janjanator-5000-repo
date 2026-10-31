@@ -6,7 +6,7 @@ $repository = Split-Path -Parent $PSScriptRoot
 & (Join-Path $repository 'build.ps1')
 $run = Join-Path $repository ('artifacts\tests-' + [Guid]::NewGuid().ToString('N').Substring(0, 12))
 [void][IO.Directory]::CreateDirectory($run)
-$app = Join-Path $repository 'dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe'
+$app = Join-Path $repository 'dist\Democracy-Enforcer-5000\Democracy Enforcer 5000.exe'
 Copy-Item -LiteralPath $app -Destination $run
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 foreach ($name in @('GuiPolicyTests','HeaderPreview','FirstLaunchSetupTests','CompatibilityTests')) {

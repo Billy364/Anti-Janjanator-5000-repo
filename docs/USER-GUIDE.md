@@ -1,13 +1,13 @@
-# Anti-Janjanator 5000
+# Democracy Enforcer 5000
 
-Open **Anti-Janjanator 5000.exe**, or double-click **Open Anti-Janjanator 5000.cmd**. Extract
+Open **Democracy Enforcer 5000.exe**, or double-click **Open Democracy Enforcer 5000.cmd**. Extract
 the ZIP first and keep all files together. This is a portable 64-bit Windows
 desktop app; no installer is needed. The C# and PowerShell source is included.
 The executable is locally built and unsigned.
 
 The supplied artwork is embedded in the header and used for the application,
 title-bar, and system-tray icon. Double-click the tray icon, or right-click it
-and choose **Open Anti-Janjanator 5000**, to bring the window back. **Exit** closes the
+and choose **Open Democracy Enforcer 5000**, to bring the window back. **Exit** closes the
 updater; an operation already in progress must finish first. The tray icon is
 removed when the updater exits.
 

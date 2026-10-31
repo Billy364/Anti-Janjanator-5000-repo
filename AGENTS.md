@@ -1,6 +1,6 @@
 # Agent instructions
 
-These instructions apply to the entire Anti-Janjanator 5000 repository.
+These instructions apply to the entire Democracy Enforcer 5000 repository.
 Read [README.md](README.md), [the user guide](docs/USER-GUIDE.md), and
 [validation notes](docs/VALIDATION.md) before changing app behavior.
 
@@ -9,8 +9,8 @@ Read [README.md](README.md), [the user guide](docs/USER-GUIDE.md), and
 Use Git from a parent directory where a new checkout can be created:
 
 ```powershell
-git clone https://github.com/Billy364/Anti-Janjanator-5000-repo.git Anti-Janjanator-5000
-Set-Location .\Anti-Janjanator-5000
+git clone https://github.com/Billy364/Anti-Janjanator-5000-repo.git Democracy-Enforcer-5000
+Set-Location .\Democracy-Enforcer-5000
 git status --short
 ```
 
@@ -59,11 +59,11 @@ The script compiles the C# interface for x64, embeds the header artwork and ICO,
 copies the required workers and documentation, and creates a portable ZIP.
 For the current v11 source, outputs are:
 
-- `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`
-- `dist\Anti-Janjanator-5000\Open Anti-Janjanator 5000.cmd`
-- `dist\Anti-Janjanator-5000\UpdaterWorker.ps1`
-- `dist\Anti-Janjanator-5000\Update-DiscordRules.ps1`
-- `dist\Anti-Janjanator-5000-v11.zip`
+- `dist\Democracy-Enforcer-5000\Democracy Enforcer 5000.exe`
+- `dist\Democracy-Enforcer-5000\Open Democracy Enforcer 5000.cmd`
+- `dist\Democracy-Enforcer-5000\UpdaterWorker.ps1`
+- `dist\Democracy-Enforcer-5000\Update-DiscordRules.ps1`
+- `dist\Democracy-Enforcer-5000-v11.zip`
 
 Distribute the generated ZIP or the entire app folder, not just the EXE: the
 PowerShell workers must stay beside it. The build is unsigned. The
@@ -73,7 +73,7 @@ change machine-wide execution policy as part of the build.
 To try the app, only when requested, open the EXE from the generated folder.
 Building and testing do not require closing the user's real Discord or Proton
 apps. If compilation cannot overwrite its output EXE, close that running copy
-of Anti-Janjanator 5000 before rebuilding.
+of Democracy Enforcer 5000 before rebuilding.
 
 ## Verify changes
 

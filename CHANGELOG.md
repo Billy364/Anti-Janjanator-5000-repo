@@ -1,3 +1,7 @@
+## Unreleased
+
+- Rename the app to Democracy Enforcer 5000, including the executable, launcher, window, tray, portable package, and website. Preserve existing setup completion records and account settings.
+
 # Changelog
 
 ## v11
