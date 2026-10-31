@@ -54,9 +54,8 @@ irm https://raw.githubusercontent.com/Billy364/Anti-Janjanator-5000-repo/main/in
 
 This downloads and executes the bootstrap script. It clones into
 `Downloads\Democracy-Enforcer-5000` (using Windows' configured Downloads folder), builds using Windows
-PowerShell 5.1 and .NET Framework, and creates **Democracy Enforcer 5000 - App
-Folder** on your Desktop (including a redirected/OneDrive Desktop). Open the
-shortcut and launch the EXE when ready. The bootstrap does not launch the app,
+PowerShell 5.1 and .NET Framework, and creates **Democracy Enforcer 5000** on your Desktop (including a redirected/OneDrive Desktop). Open the
+shortcut to launch the EXE when ready. The bootstrap does not launch the app,
 modify Proton settings, request administrator access, or change machine-wide
 execution policy. First launch of the app still performs the setup described above.
 

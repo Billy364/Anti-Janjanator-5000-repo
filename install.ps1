@@ -53,21 +53,21 @@ function Install-DemocracyEnforcer {
     $appFolder = Join-Path $destinationPath 'dist\Democracy-Enforcer-5000'
     $app = Join-Path $appFolder 'Democracy Enforcer 5000.exe'
     if (-not (Test-Path -LiteralPath $app -PathType Leaf)) { throw 'Expected Democracy Enforcer build is missing. Use a branch containing the renamed app.' }
-    $shortcutPath = Join-Path $desktopPath 'Democracy Enforcer 5000 - App Folder.lnk'
+    $shortcutPath = Join-Path $desktopPath 'Democracy Enforcer 5000.lnk'
     $shell = New-Object -ComObject WScript.Shell
     try {
         $shortcut = $shell.CreateShortcut($shortcutPath)
         try {
-            $shortcut.TargetPath = $appFolder
+            $shortcut.TargetPath = $app
             $shortcut.WorkingDirectory = $appFolder
             $shortcut.IconLocation = $app + ',0'
-            $shortcut.Description = 'Open the portable Democracy Enforcer 5000 app folder'
+            $shortcut.Description = 'Launch Democracy Enforcer 5000'
             $shortcut.Save()
         } finally { if ($null -ne $shortcut) { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($shortcut) } }
     } finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($shell) }
     Write-Output "Built app: $app"
     Write-Output "Desktop shortcut: $shortcutPath"
-    Write-Output 'Open the shortcut, then launch Democracy Enforcer 5000.exe when ready. Installation does not launch the app or change Proton settings.'
+    Write-Output 'Open the Desktop shortcut to launch Democracy Enforcer 5000 when ready. Installation does not launch the app or change Proton settings.'
 }
 
 Install-DemocracyEnforcer -SourceUrl $RepositoryUrl -SourceBranch $Branch -Destination $InstallDirectory -DesktopDirectory $ShortcutDirectory
