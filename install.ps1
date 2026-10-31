@@ -3,7 +3,7 @@
 param(
     [string]$RepositoryUrl = 'https://github.com/Billy364/Anti-Janjanator-5000-repo.git',
     [string]$Branch = 'main',
-    [string]$InstallDirectory = (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Programs\Democracy-Enforcer-5000\source'),
+    [string]$InstallDirectory,
     [string]$ShortcutDirectory = ([Environment]::GetFolderPath('Desktop'))
 )
 
@@ -19,6 +19,12 @@ function Install-DemocracyEnforcer {
     $git = (Get-Command git.exe -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
     $powershell = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
     if ([string]::IsNullOrWhiteSpace($SourceBranch) -or $SourceBranch.StartsWith('-')) { throw 'Invalid branch name.' }
+    if ([string]::IsNullOrWhiteSpace($Destination)) {
+        # Windows stores redirected/localized Downloads here under its known-folder ID.
+        $downloadsFolder = (Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -ErrorAction Stop).'{374DE290-123F-4565-9164-39C4925E467B}'
+        if ([string]::IsNullOrWhiteSpace($downloadsFolder)) { throw 'Windows Downloads folder could not be resolved. Specify -InstallDirectory.' }
+        $Destination = Join-Path ([Environment]::ExpandEnvironmentVariables($downloadsFolder)) 'Democracy-Enforcer-5000'
+    }
     $destinationPath = [IO.Path]::GetFullPath($Destination)
     $desktopPath = [IO.Path]::GetFullPath($DesktopDirectory)
     if (-not (Test-Path -LiteralPath $desktopPath -PathType Container)) { throw 'Desktop folder was not found.' }

@@ -53,7 +53,7 @@ irm https://raw.githubusercontent.com/Billy364/Anti-Janjanator-5000-repo/main/in
 ```
 
 This downloads and executes the bootstrap script. It clones into
-`%LOCALAPPDATA%\Programs\Democracy-Enforcer-5000\source`, builds using Windows
+`Downloads\Democracy-Enforcer-5000` (using Windows' configured Downloads folder), builds using Windows
 PowerShell 5.1 and .NET Framework, and creates **Democracy Enforcer 5000 - App
 Folder** on your Desktop (including a redirected/OneDrive Desktop). Open the
 shortcut and launch the EXE when ready. The bootstrap does not launch the app,
