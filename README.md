@@ -1,9 +1,9 @@
-# Anti-Janjanator 5000
+# Democracy Enforcer 5000
 
 A portable Windows app that refreshes Discord executable paths in Proton VPN's
 Split Tunneling **Included apps** after Discord updates.
 
-![Anti-Janjanator 5000 interface with example data](docs/screenshot.png)
+![Democracy Enforcer 5000 interface with example data](docs/screenshot.png)
 
 The app monitors Discord and the Proton VPN desktop client. Use **Close both
 apps**, then **Refresh split tunneling rules** once both have exited. Select
@@ -55,9 +55,9 @@ From Windows PowerShell in this repository:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-Open `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`. Keep the generated
+Open `dist\Democracy-Enforcer-5000\Democracy Enforcer 5000.exe`. Keep the generated
 folder together: the two PowerShell workers are needed at runtime. The build
-also creates `dist\Anti-Janjanator-5000-v11.zip` for sharing. Builds are unsigned.
+also creates `dist\Democracy-Enforcer-5000-v11.zip` for sharing. Builds are unsigned.
 
 ## Verify
 

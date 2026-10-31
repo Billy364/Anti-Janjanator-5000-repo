@@ -25,7 +25,7 @@ class HeaderPreview
     static Label FindHeading(Control control)
     {
         Label label = control as Label;
-        if (label != null && label.Text == "Anti-Janjanator 5000") return label;
+        if (label != null && label.Text == "Democracy Enforcer 5000") return label;
         foreach (Control child in control.Controls) { Label found = FindHeading(child); if (found != null) return found; }
         return null;
     }
@@ -45,7 +45,7 @@ class HeaderPreview
             FieldInfo field = typeof(UpdaterForm).GetField("trayIcon", BindingFlags.NonPublic | BindingFlags.Instance);
             NotifyIcon tray = (NotifyIcon)field.GetValue(form);
             if (tray == null || tray.Icon == null || !tray.Visible || tray.ContextMenuStrip.Items.Count != 3) throw new Exception("Tray icon/menu incomplete.");
-            if (form.Text != "Anti-Janjanator 5000" || tray.Text != form.Text || tray.ContextMenuStrip.Items[0].Text != "Open " + form.Text) throw new Exception("App name mismatch.");
+            if (form.Text != "Democracy Enforcer 5000" || tray.Text != form.Text || tray.ContextMenuStrip.Items[0].Text != "Open " + form.Text) throw new Exception("App name mismatch.");
             Label heading = FindHeading(form);
             if (heading == null || TextRenderer.MeasureText(heading.Text, heading.Font).Width > heading.ClientSize.Width) throw new Exception("Header name missing or clipped.");
             using (Bitmap preview = new Bitmap(form.Width, form.Height))
