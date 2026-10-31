@@ -7,7 +7,10 @@ Windows startup is a shared Proton preference for that Windows user.
 
 Exit Proton VPN from its system-tray icon. Setup waits for two clear checks of
 the desktop client's exit and rechecks in the settings writer. Discord can stay
-open. After setup succeeds, the original updater opens with the same two action
+open. Click **Apply setup and open updater** after the button unlocks; it does
+not run merely because the account is selected or Proton exits. Setup is required
+before the main interface can open. Exit/X closes the program instead of skipping.
+After setup succeeds, the original updater opens with the same two action
 buttons and interface. Use its normal close/refresh workflow to update Discord's
 executable list, then reopen Proton and reconnect before opening Discord again.
 
@@ -44,13 +47,18 @@ Successful setup writes:
 
 The marker stores a setup version and completion time, with no account contents.
 It belongs to the Windows user, not the extracted app folder. Later launches
-skip setup entirely, even if the user manually changes Proton preferences or
-switches accounts. App updates do not reset it. A lock prevents two copies from
+skip the setup window, even if the user manually changes Proton preferences or
+switches accounts. An explicit Refresh enables Include mode if needed, while
+leaving startup, connection location, and protocol preferences unchanged. App
+updates do not reset the marker. A lock prevents two copies from
 performing setup at once.
 
-If you skip setup, cannot sign in yet, or encounter a write error, the updater
-can still open normally. No successful-completion marker is created; a later
-launch can retry. You can also use **Retry setup** after resolving an error.
+If no account is detected, sign in to Proton once or use **Browse account
+settings** to choose the account file. If you cannot complete setup or encounter
+a write error, the main updater stays blocked. Resolve the error and click
+**Retry setup**, or exit the program and retry on a later launch. Closing the
+window or returning an unverified success result cannot bypass the completion
+record check. Setup controls are locked while files are being written.
 
 ## Backups and interrupted setup
 
@@ -87,6 +95,7 @@ and these official Proton Windows source files at commit
 
 Regression tests use synthetic files, process guards, and accounts. They verify
 the saved preferences, exact backups, preservation, once-only behavior, failures,
-rollback, concurrency, and the first-launch form's automatic wait/account flow.
+rollback, concurrency, and the first-launch form's required wait/account/button
+flow. Cancellation, errors, and missing completion records cannot unlock startup.
 They do not change live Proton settings or verify startup at a Windows reboot,
 Proton account entitlements, or VPN traffic routing.

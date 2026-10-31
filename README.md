@@ -12,6 +12,7 @@ the intended account if more than one Proton account is saved on the PC.
 - Finds Discord, PTB, and Canary installations and their helper executables.
 - Blocks refresh while matching apps are running or their status is uncertain.
 - Adds current executable paths and removes missing old Discord paths.
+- Automatically enables Split tunneling in Include mode when you click Refresh.
 - Preserves unrelated Included apps and preferences, with an exact backup for
   every actual change.
 - Leaves the apps closed; reopen Proton, reconnect, then open Discord.
@@ -30,13 +31,15 @@ subject to Proton's account/feature availability. Existing exclusions and
 Included apps are preserved.
 
 Choose an account if more than one is saved, and exit Proton from its tray icon.
-Setup applies automatically once its exit is verified, then opens the same
-updater interface. Reopen Proton afterward to apply the preferences and register
+Click **Apply setup and open updater** once its exit is verified. First-time
+setup is required: there is no skip option, and Exit/X closes the program. The
+same updater interface opens only after successful setup. Reopen Proton afterward to apply the preferences and register
 Windows startup. Discord can stay open during this setup step.
 
 Successful setup is remembered outside the app folder. Future launches and
-newly extracted app versions leave these preferences unchanged. Failed or
-skipped setup remains pending for a later launch. See
+newly extracted app versions skip completed setup. An explicit Refresh may
+re-enable Include mode; it leaves the other first-launch preferences alone.
+Failed or canceled setup remains pending for a later launch. See
 [first-launch details](docs/FIRST-LAUNCH.md) for backups and limitations.
 
 ## Build and run
@@ -52,7 +55,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 Open `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`. Keep the generated
 folder together: the two PowerShell workers are needed at runtime. The build
-also creates `dist\Anti-Janjanator-5000-v9.zip` for sharing. Builds are unsigned.
+also creates `dist\Anti-Janjanator-5000-v10.zip` for sharing. Builds are unsigned.
 
 ## Verify
 
@@ -66,9 +69,9 @@ edit real account settings. Temporary fixtures and previews go in `artifacts/`.
 See [validation notes](docs/VALIDATION.md) for the scope and limitations.
 
 If a newly signed-in account has no saved split-tunneling settings yet, the app
-now shows whether Split tunneling is off or still uses Exclude mode. Enable
-Include mode in Proton, apply it, and exit Proton before refreshing. An omitted
-Included-app list can be created by Refresh once Include mode is enabled. See
+shows whether Split tunneling is off or still uses Exclude mode. After both apps
+exit, click Refresh: it enables Include mode and creates the Discord entries in
+one saved update with an exact backup. There is no manual Proton mode setup. See
 [troubleshooting](docs/TROUBLESHOOTING.md) for the former unsupported-format error
 and uncertain process status.
 

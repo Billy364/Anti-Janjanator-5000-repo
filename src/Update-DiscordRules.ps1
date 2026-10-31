@@ -138,7 +138,7 @@ function Get-InventorySignature {
 }
 
 function Read-ProtonSettings {
-    param([string]$Path)
+    param([string]$Path, [switch]$EnableSplitTunneling)
     $fullPath = (Get-Item -LiteralPath $Path -Force).FullName
     $bytes = [IO.File]::ReadAllBytes($fullPath)
     $hasBom = $bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191
@@ -161,10 +161,12 @@ function Read-ProtonSettings {
         $keys[$key] = $entry
     }
     if ($entries.Count -ne @($settings.PSObject.Properties).Count) { throw 'Unsupported Proton settings structure.' }
+    $recognized = @('IsUserSettingsMigrationDone','VpnProtocol','IsSplitTunnelingEnabled','SplitTunnelingMode','SplitTunnelingInverseAppsList') | Where-Object { $keys.ContainsKey($_) }
+    if (@($recognized).Count -eq 0) { throw 'Unsupported Proton account settings format.' }
     if ($null -ne $settings.PSObject.Properties['IsSplitTunnelingEnabled'] -and $null -ne $settings.IsSplitTunnelingEnabled) { $enabled = [string]$settings.IsSplitTunnelingEnabled }
     if ($null -ne $settings.PSObject.Properties['SplitTunnelingMode'] -and $null -ne $settings.SplitTunnelingMode) { $mode = [string]$settings.SplitTunnelingMode }
     if ($enabled -notin @('true','false') -or $mode -notin @('Standard','Inverse')) { throw 'Unsupported Proton split tunneling values.' }
-    if ($enabled -ine 'true' -or $mode -ine 'Inverse') {
+    if (-not $EnableSplitTunneling -and ($enabled -ine 'true' -or $mode -ine 'Inverse')) {
         throw 'Enable Split tunneling in Include mode in Proton first. The updater does not change your VPN mode.'
     }
     if ($null -ne $settings.PSObject.Properties['SplitTunnelingInverseAppsList'] -and $null -ne $settings.SplitTunnelingInverseAppsList) { $appsJson = $settings.SplitTunnelingInverseAppsList }
@@ -191,7 +193,9 @@ function Read-ProtonSettings {
     }
     return [pscustomobject]@{
         Path = $fullPath; Bytes = $bytes; Text = $text; HasBom = $hasBom
-        ValueMatch = $valueMatch; Apps = $apps
+        ValueMatch = $valueMatch; Apps = $apps; PropertyMatches = $keys
+        EnableSplitTunneling = [bool]$EnableSplitTunneling
+        SplitTunnelingEnabled = $enabled; SplitTunnelingMode = $mode
     }
 }
 
@@ -236,23 +240,32 @@ function New-DiscordRulePlan {
     }
     $oldCanonical = ConvertTo-Json -InputObject @($Snapshot.Apps) -Depth 30 -Compress
     $newCanonical = ConvertTo-Json -InputObject @($newApps) -Depth 30 -Compress
-    $changed = $oldCanonical -cne $newCanonical
-    # Replace only the Included apps string. All other bytes/preferences are retained.
-    $encodedValue = ConvertTo-Json -InputObject $newCanonical -Compress
-    $value = $Snapshot.ValueMatch
-    if ($null -eq $value) {
-        $end = $Snapshot.Text.LastIndexOf('}')
-        $newText = $Snapshot.Text.Insert($end, ',"SplitTunnelingInverseAppsList":' + $encodedValue)
-    } else {
-        $newText = $Snapshot.Text.Substring(0, $value.Index) + $encodedValue +
-            $Snapshot.Text.Substring($value.Index + $value.Length)
+    $activated = $Snapshot.EnableSplitTunneling -and ($Snapshot.SplitTunnelingEnabled -cne 'true' -or $Snapshot.SplitTunnelingMode -cne 'Inverse')
+    $changed = $oldCanonical -cne $newCanonical -or $activated
+    # The GUI explicitly requests automatic activation. Commit its flag/mode
+    # and app list in one atomic replacement and one exact original backup.
+    $updates = [ordered]@{ SplitTunnelingInverseAppsList = $newCanonical }
+    if ($Snapshot.EnableSplitTunneling) { $updates['IsSplitTunnelingEnabled'] = 'true'; $updates['SplitTunnelingMode'] = 'Inverse' }
+    $replacements = @(); $additions = @()
+    foreach ($key in $updates.Keys) {
+        $encodedValue = ConvertTo-Json -InputObject ([string]$updates[$key]) -Compress
+        if ($Snapshot.PropertyMatches.ContainsKey($key)) {
+            $span = $Snapshot.PropertyMatches[$key].Groups['value']
+            $replacements += [pscustomobject]@{ Index = $span.Index; Length = $span.Length; Value = $encodedValue }
+        } else { $additions += ((ConvertTo-Json -InputObject $key -Compress) + ':' + $encodedValue) }
     }
+    $newText = $Snapshot.Text
+    foreach ($replacement in @($replacements | Sort-Object Index -Descending)) {
+        $newText = $newText.Substring(0, $replacement.Index) + $replacement.Value + $newText.Substring($replacement.Index + $replacement.Length)
+    }
+    if ($additions.Count -gt 0) { $newText = $newText.Insert($newText.LastIndexOf('}'), ',' + ($additions -join ',')) }
     $encoding = New-Object Text.UTF8Encoding($false)
     [byte[]]$newBytes = $encoding.GetBytes($newText)
     if ($Snapshot.HasBom) { $newBytes = [byte[]](@(239, 187, 191) + $newBytes) }
     $oldPaths = @($managed | ForEach-Object { ConvertTo-NormalPath $_.AppFilePath })
     return [pscustomobject]@{
         Changed = $changed; Bytes = $newBytes; DesiredPaths = $desiredPaths
+        EnabledSplitTunneling = $activated
         Added = @($desiredPaths | Where-Object { $oldPaths -inotcontains $_ })
         Removed = @($oldPaths | Where-Object { $desiredPaths -inotcontains $_ })
         PreservedCount = $preserved.Count

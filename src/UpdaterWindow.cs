@@ -13,8 +13,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyProduct("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyDescription("Discord rules updater for Proton VPN split tunneling")]
-[assembly: System.Reflection.AssemblyVersion("9.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("9.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("10.0.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("10.0.0.0")]
 
 namespace DiscordProtonUpdater
 {
@@ -29,6 +29,7 @@ namespace DiscordProtonUpdater
         public string Display { get; set; }
         public string Detail { get; set; }
         public bool Ready { get; set; }
+        public bool NeedsSplitTunnelingActivation { get; set; }
         public override string ToString() { return Display; }
     }
     public sealed class AppInspection
@@ -60,6 +61,7 @@ namespace DiscordProtonUpdater
         public string BackupPath { get; set; }
         public string[] Added { get; set; }
         public string[] Removed { get; set; }
+        public bool EnabledSplitTunneling { get; set; }
     }
     public interface IUpdaterBackend
     {
@@ -182,9 +184,10 @@ namespace DiscordProtonUpdater
                 { account.Detail = "Unsupported Proton split tunneling values."; return account; }
                 if (appsValue != null && !(Json().DeserializeObject((string)appsValue) is object[]))
                 { account.Detail = "Included apps is not a valid list. Apply Include mode in Proton again."; return account; }
-                account.Ready = enabled == "true" && mode == "Inverse";
-                account.Detail = enabled != "true" ? "Split tunneling is off for this account. In Proton, enable Split tunneling > Include mode and Apply, then exit Proton." :
-                    mode != "Inverse" ? "This account uses Exclude mode. In Proton, select Include mode and Apply, then exit Proton." :
+                account.Ready = true;
+                account.NeedsSplitTunnelingActivation = enabled != "true" || mode != "Inverse";
+                account.Detail = enabled != "true" ? "Split tunneling is off. Refresh will enable Include mode and update Discord's rules automatically." :
+                    mode != "Inverse" ? "This account uses Exclude mode. Refresh will switch to Include mode and update Discord's rules automatically." :
                     appsValue == null ? "Include mode is enabled. No saved list yet; Refresh will create the Discord entries." : "Include mode is enabled. This account is ready.";
             }
             catch { account.Detail = "Settings could not be read. Reload after Proton finishes saving, or choose another file."; account.Ready = false; }
@@ -533,6 +536,7 @@ namespace DiscordProtonUpdater
             else if (!last.ScanReady) text = last.ScanDetail;
             else if (account == null) text = "Both apps are closed. Choose your Proton account settings file to enable Refresh.";
             else if (!account.Ready) text = account.Detail;
+            else if (account.NeedsSplitTunnelingActivation) text = "Both apps are fully exited. Refresh will turn Split tunneling ON in Include mode and update Discord's rules.";
             else text = successText ?? "Both apps are fully exited. You can now refresh the split tunneling rules.";
             warning.Text = text;
             bool ready = !busy && last.AppsExited && clearPolls >= 2 && account != null && account.Ready && last.ScanReady;
@@ -545,7 +549,7 @@ namespace DiscordProtonUpdater
             if (action == "Close" && !UiPolicy.CanClose(last, false)) return;
             OperationRequest request = new OperationRequest { Action = action, SettingsPath = SelectedAccount == null ? null : SelectedAccount.Path, Roots = new List<string>(last.Roots) };
             busy = true; successText = null; clearPolls = 0; inspectionGeneration++;
-            AppendLog(action == "Close" ? "Closing Discord and the Proton VPN desktop client..." : "Rechecking app exit and refreshing the selected account's rules...");
+            AppendLog(action == "Close" ? "Closing Discord and the Proton VPN desktop client..." : "Rechecking app exit, enabling Include mode if needed, and refreshing the selected account's rules...");
             RenderState(); operation.RunWorkerAsync(request);
         }
         private void AppendLog(string text)
@@ -564,8 +568,10 @@ namespace DiscordProtonUpdater
             {
                 DesktopBackend backend = new DesktopBackend(AppDomain.CurrentDomain.BaseDirectory);
                 FirstLaunchSetup setup = new FirstLaunchSetup(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DiscordProtonUpdater"), FirstLaunchSetup.AssertProtonClosed);
-                JobResult result = null;
-                if (setup.IsPending) using (FirstLaunchForm first = new FirstLaunchForm(backend, setup)) { first.ShowDialog(); result = first.Result; }
+                JobResult result;
+                if (!setup.RunRequiredSetup(delegate {
+                    using (FirstLaunchForm first = new FirstLaunchForm(backend, setup)) { return first.ShowDialog() == DialogResult.OK ? first.Result : null; }
+                }, out result)) return;
                 Application.Run(new UpdaterForm(backend, result));
             }
             catch (Exception error) { MessageBox.Show(error.Message, AppIdentity.Name, MessageBoxButtons.OK, MessageBoxIcon.Error); }

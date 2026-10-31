@@ -20,9 +20,9 @@ function global:Stop-Process {
 function global:Start-Process { [CmdletBinding()]param([string]$FilePath,[string]$WorkingDirectory,[string]$WindowStyle) throw 'GUI operations must leave the real apps closed.' }
 function Wait-AppGroupExit { param([scriptblock]$FindProcesses,[int]$TimeoutSeconds) return (@(& $FindProcesses).Count -eq 0) }
 function Read-ProtonSettings {
-    param([string]$Path)
+    param([string]$Path,[switch]$EnableSplitTunneling)
     $script:readCount++
-    $snapshot = & $script:originalReader $Path
+    $snapshot = & $script:originalReader -Path $Path -EnableSplitTunneling:$EnableSplitTunneling
     if ($script:injectOnRead) { $script:fakeProcesses = @((New-FakeProcess 99 $protonPath)); $script:injectOnRead = $false }
     return $snapshot
 }
@@ -120,3 +120,70 @@ $duplicateFile=Join-Path $RunFolder 'UserSettings.duplicate.json'
 [IO.File]::WriteAllText($duplicateFile,'{"IsSplitTunnelingEnabled":"true","SplitTunnelingMode":"Inverse","SplitTunnelingInverseAppsList":"[]","SplitTunnelingInverseAppsList":"[]"}')
 Assert-Rejected { & $script:originalReader $duplicateFile } 'Duplicate or ambiguous'
 Write-Output 'PASS: Duplicate settings properties remain rejected.'
+
+# The GUI opts into activation; the reader's legacy CLI default stays read-only
+# with respect to the VPN mode. Flags and rules must be committed together.
+foreach ($activationMode in @('missing','off','exclude','null')) {
+    $activationFile=Join-Path $RunFolder ('UserSettings.auto-'+$activationMode+'.json')
+    $activationSettings=[ordered]@{
+        IsUserSettingsMigrationDone='true'; IsAutoConnectEnabled='false'; VpnProtocol='Smart'
+        SplitTunnelingStandardAppsList='[{"AppFilePath":"C:\\Other\\Keep.exe","AlternateAppFilePaths":[],"IsActive":true}]'
+        SplitTunnelingInverseIpAddressesList='[{"IpAddress":"192.0.2.1","IsActive":false}]'
+    }
+    if ($activationMode -ne 'missing') {
+        $activationSettings['IsSplitTunnelingEnabled']=if($activationMode -eq 'null'){$null}elseif($activationMode -eq 'exclude'){'true'}else{'false'}
+        $activationSettings['SplitTunnelingMode']=if($activationMode -eq 'null'){$null}else{'Standard'}
+        $activationSettings['SplitTunnelingInverseAppsList']=if($activationMode -eq 'null'){$null}else{'[{"AppFilePath":"C:\\Other\\Browser.exe","AlternateAppFilePaths":[],"IsActive":false}]'}
+    }
+    $activationText=ConvertTo-Json $activationSettings -Compress
+    $activationText=$activationText.Insert($activationText.Length-1,',"OpaqueKeep"  :  "keep\u0020exact"')
+    [IO.File]::WriteAllText($activationFile,$activationText,(New-Object Text.UTF8Encoding($true)))
+    $requestAuto=[pscustomobject]@{Action='Refresh';SettingsPath=$activationFile;Roots=@($root)}
+    $before=[IO.File]::ReadAllBytes($activationFile)
+    $backupCount=@(Get-ChildItem -LiteralPath (Join-Path $RunFolder 'DiscordRuleBackups') -File).Count
+    $enabledResult=Invoke-InterfaceOperation $requestAuto
+    $afterAuto=[IO.File]::ReadAllText($activationFile)|ConvertFrom-Json
+    Assert-True ($enabledResult.Success -and $enabledResult.EnabledSplitTunneling -and $afterAuto.IsSplitTunnelingEnabled -ceq 'true' -and $afterAuto.SplitTunnelingMode -ceq 'Inverse') 'Refresh did not activate Include mode.'
+    Assert-True ($afterAuto.IsAutoConnectEnabled -ceq 'false' -and $afterAuto.VpnProtocol -ceq 'Smart' -and $afterAuto.SplitTunnelingStandardAppsList -ceq $activationSettings.SplitTunnelingStandardAppsList -and $afterAuto.SplitTunnelingInverseIpAddressesList -ceq $activationSettings.SplitTunnelingInverseIpAddressesList) 'Activation changed an unrelated preference/list.'
+    Assert-True ([IO.File]::ReadAllText($activationFile).Contains('"OpaqueKeep"  :  "keep\u0020exact"') -and [IO.File]::ReadAllBytes($activationFile)[0] -eq 239) 'Activation rewrote unrelated bytes/BOM.'
+    Assert-True ([Convert]::ToBase64String([IO.File]::ReadAllBytes($enabledResult.BackupPath)) -ceq [Convert]::ToBase64String($before) -and @(Get-ChildItem -LiteralPath (Join-Path $RunFolder 'DiscordRuleBackups') -File).Count -eq ($backupCount+1)) 'Activation/rules did not use one exact backup.'
+    $repeatAuto=Invoke-InterfaceOperation $requestAuto
+    Assert-True ($null -eq $repeatAuto.BackupPath -and -not $repeatAuto.EnabledSplitTunneling) 'Repeated activation did not become a no-op.'
+}
+Write-Output 'PASS: GUI Refresh enables missing/off/Exclude/null settings with rules in one write, preserves preferences/lists/opaque bytes/BOM, and uses one exact backup.'
+
+# Leave the rule list current and switch only its activation state off.
+$flagOnly=[IO.File]::ReadAllText($activationFile)|ConvertFrom-Json
+$flagOnly.IsSplitTunnelingEnabled='false';$flagOnly.SplitTunnelingMode='Standard'
+[IO.File]::WriteAllText($activationFile,(ConvertTo-Json $flagOnly -Depth 30))
+$flagBefore=[IO.File]::ReadAllBytes($activationFile)
+$flagResult=Invoke-InterfaceOperation $requestAuto
+Assert-True ($flagResult.EnabledSplitTunneling -and $flagResult.Added.Count -eq 0 -and $flagResult.Removed.Count -eq 0 -and $null -ne $flagResult.BackupPath) 'Current rules prevented activation-only write.'
+Assert-True ([Convert]::ToBase64String([IO.File]::ReadAllBytes($flagResult.BackupPath)) -ceq [Convert]::ToBase64String($flagBefore)) 'Activation-only backup is not exact.'
+Write-Output 'PASS: Already-current Discord rules still allow a backed-up activation-only change.'
+
+$guardFile=Join-Path $RunFolder 'UserSettings.guarded.json'
+$guardText='{"IsUserSettingsMigrationDone":"true","IsSplitTunnelingEnabled":"false","SplitTunnelingMode":"Standard"}'
+$guardRequest=[pscustomobject]@{Action='Refresh';SettingsPath=$guardFile;Roots=@($root)}
+foreach($path in @($main,$protonPath)) {
+    [IO.File]::WriteAllText($guardFile,$guardText);$script:fakeProcesses=@((New-FakeProcess 77 $path))
+    Assert-Rejected { Invoke-InterfaceOperation $guardRequest } 'running'
+    Assert-True ([IO.File]::ReadAllText($guardFile) -ceq $guardText) 'Running-app rejection partially enabled split tunneling.'
+}
+$script:fakeProcesses=@();$script:injectOnRead=$true
+Assert-Rejected { Invoke-InterfaceOperation $guardRequest } 'running'
+Assert-True ([IO.File]::ReadAllText($guardFile) -ceq $guardText) 'Late restart partially enabled split tunneling.'
+$script:fakeProcesses=@()
+$guardSnapshot=& $script:originalReader -Path $guardFile -EnableSplitTunneling
+$guardInventory=@(Get-DiscordInventory @($root));$guardPlan=New-DiscordRulePlan $guardSnapshot @($root) $guardInventory
+$newerText=$guardText.Insert($guardText.Length-1,',"NewerPreference":"preserve"');[IO.File]::WriteAllText($guardFile,$newerText)
+Assert-Rejected { Write-DiscordRulePlan $guardSnapshot $guardPlan @($root) $guardInventory } 'settings changed'
+Assert-True ([IO.File]::ReadAllText($guardFile) -ceq $newerText) 'Concurrent edit was overwritten during activation.'
+Write-Output 'PASS: Running apps, late restarts, and concurrent settings edits prevent both activation and rule writes.'
+
+foreach($invalid in @('{"unrelated":"file"}','{"IsSplitTunnelingEnabled":true}','{"IsSplitTunnelingEnabled":"false","SplitTunnelingInverseAppsList":"[42]"}')) {
+    [IO.File]::WriteAllText($guardFile,$invalid)
+    Assert-Rejected { Invoke-InterfaceOperation $guardRequest } 'Unsupported'
+    Assert-True ([IO.File]::ReadAllText($guardFile) -ceq $invalid) 'Unsupported settings partially activated split tunneling.'
+}
+Write-Output 'PASS: Automatic activation does not bypass unknown-format or invalid-list checks.'

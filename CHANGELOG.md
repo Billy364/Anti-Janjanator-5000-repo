@@ -1,5 +1,18 @@
 # Changelog
 
+## v10
+
+- Made first-launch setup mandatory. Exit Proton, select the account, and click
+  Apply setup and open updater. The button stays disabled until exit is verified.
+- Removed the skip option. Exit/X, missing accounts, failed setup, or an absent
+  completion record cannot open the main interface. Added retry/gate coverage.
+- GUI Refresh automatically enables Split tunneling in Include mode, including
+  for a newly selected account after first-launch setup has completed.
+- Activation flags and Discord rules share one guarded atomic write and exact
+  backup. Unrelated app lists/preferences are retained; repeated refresh is a no-op.
+- Added activation tests for omitted/off/Exclude/null settings, mode-only writes,
+  preservation, restart/concurrent-edit guards, and unsupported schemas.
+
 ## v9
 
 - Fixed the unsupported-format message for accounts whose default Proton

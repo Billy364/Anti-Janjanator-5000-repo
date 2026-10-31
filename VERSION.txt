@@ -1,6 +1,11 @@
-Anti-Janjanator 5000 - Windows interface edition v9
+Anti-Janjanator 5000 - Windows interface edition v10
+First-launch setup is mandatory: exit Proton, select the account, and click
+Apply setup and open updater. Exit/X and errors cannot bypass setup.
+GUI Refresh enables Split tunneling in Include mode automatically, saving
+activation and Discord rules together with one exact backup. Other preferences
+are preserved, including the one-time startup/protocol/location settings.
 Recognizes omitted Proton default settings and explains off/Exclude mode.
-Refresh can create a missing/null saved Include list without changing VPN mode.
+Refresh can create a missing/null saved Include list and enable Include mode.
 Process image lookup uses limited query rights, ignores exited processes, and
 discards pre-operation inspection results after closing the apps.
 First successful launch per Windows user configures Proton startup and

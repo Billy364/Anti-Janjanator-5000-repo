@@ -22,6 +22,13 @@ namespace DiscordProtonUpdater
         public bool IsPending { get { return !File.Exists(MarkerPath); } }
         public FirstLaunchSetup(string folder, Action guard)
         { stateFolder = Path.GetFullPath(folder); assertProtonClosed = guard; }
+        public bool RunRequiredSetup(Func<JobResult> showSetup, out JobResult result)
+        {
+            result = null;
+            if (!IsPending) return true;
+            result = showSetup();
+            return result != null && result.Success && !IsPending;
+        }
 
         public static void AssertProtonClosed()
         {
@@ -262,12 +269,16 @@ namespace DiscordProtonUpdater
         private readonly Timer timer = new Timer();
         private readonly ComboBox accounts = new ComboBox();
         private readonly Label status = new Label();
-        private readonly Button continueButton = new Button(), retryButton = new Button();
+        private readonly LinkLabel browse = new LinkLabel();
+        private readonly Button exitButton = new Button(), applyButton = new Button();
         private bool busy, stopped, failed, binding;
+        private string failureMessage;
+        private string requestedAccount;
         private int clearPolls;
         private AppInspection latest;
         private Icon appIcon;
         public JobResult Result { get; private set; }
+        public Button ApplySetupButton { get { return applyButton; } }
         public FirstLaunchForm(IUpdaterBackend value, FirstLaunchSetup service)
         {
             backend = value; setup = service; Text = AppIdentity.Name + " | First-time setup";
@@ -277,50 +288,72 @@ namespace DiscordProtonUpdater
                 if (resource != null) using (Icon original = new Icon(resource)) { appIcon = (Icon)original.Clone(); Icon = appIcon; }
             Label title = new Label { Text = "Set up Proton VPN once", Font = new Font("Segoe UI", 18F, FontStyle.Bold), Location = new Point(22, 16), Size = new Size(600, 40) };
             Label description = new Label { Location = new Point(24, 65), Size = new Size(600, 145), Text =
-                "\u2022 Start with Windows and connect automatically\n\u2022 Default connection: Fastest country; exclude Brazil\n\u2022 Proton Protocols: ON, using Proton WireGuard\n\u2022 Split tunneling: ON, using Include mode (if supported)\n\nSelect your account below and exit Proton VPN from its tray icon. Setup applies automatically, then opens the usual updater." };
+                "\u2022 Start with Windows and connect automatically\n\u2022 Default connection: Fastest country; exclude Brazil\n\u2022 Proton Protocols: ON, using Proton WireGuard\n\u2022 Split tunneling: ON, using Include mode (if supported)\n\nSelect your account and exit Proton VPN from its tray icon. Then click Apply setup and open updater. Setup is required to continue." };
             accounts.Name = "FirstLaunchAccount"; accounts.Location = new Point(24, 220); accounts.Size = new Size(600, 30); accounts.DropDownStyle = ComboBoxStyle.DropDownList;
-            accounts.SelectedIndexChanged += delegate { if (!binding) clearPolls = 0; };
-            status.Location = new Point(24, 265); status.Size = new Size(600, 82); status.Text = "Checking Proton VPN and saved accounts...";
-            continueButton.Text = "Continue without setup"; continueButton.Location = new Point(400, 370); continueButton.Size = new Size(224, 36);
-            continueButton.Click += delegate { if (!busy) Close(); };
-            retryButton.Text = "Retry setup"; retryButton.Location = new Point(24, 370); retryButton.Size = new Size(150, 36); retryButton.Visible = false;
-            retryButton.Click += delegate { failed = false; clearPolls = 0; retryButton.Visible = false; Poll(); };
-            Controls.AddRange(new Control[] { title, description, accounts, status, continueButton, retryButton });
+            accounts.SelectedIndexChanged += delegate { if (!binding) { clearPolls = 0; failed = false; UpdateState(); } };
+            browse.Text = "Browse account settings..."; browse.Location = new Point(24, 253); browse.AutoSize = true;
+            browse.LinkClicked += delegate
+            {
+                if (busy) return;
+                using (OpenFileDialog picker = new OpenFileDialog { Title = "Choose the Proton account to configure", Filter = "Proton account settings|UserSettings*.json|JSON files|*.json", CheckFileExists = true })
+                {
+                    if (picker.ShowDialog(this) != DialogResult.OK) return;
+                    backend.AddAccount(picker.FileName); requestedAccount = Path.GetFullPath(picker.FileName);
+                    clearPolls = 0; failed = false; UpdateState(); Poll();
+                }
+            };
+            status.Location = new Point(24, 285); status.Size = new Size(600, 70); status.Text = "Checking Proton VPN and saved accounts...";
+            exitButton.Name = "ExitSetupButton"; exitButton.Text = "Exit"; exitButton.Location = new Point(24, 370); exitButton.Size = new Size(110, 36);
+            exitButton.Click += delegate { if (!busy) Close(); }; CancelButton = exitButton;
+            applyButton.Name = "ApplySetupButton"; applyButton.Text = "Apply setup and open updater"; applyButton.Location = new Point(334, 370); applyButton.Size = new Size(290, 36); applyButton.Enabled = false;
+            applyButton.Click += delegate
+            {
+                if (!applyButton.Enabled || busy || latest == null || !latest.Known || latest.ProtonCount != 0 || clearPolls < 2 || accounts.SelectedItem == null) return;
+                busy = true; failed = false; timer.Stop(); UpdateState();
+                apply.RunWorkerAsync(((AccountInfo)accounts.SelectedItem).Path);
+            };
+            Controls.AddRange(new Control[] { title, description, accounts, browse, status, exitButton, applyButton });
             inspect.DoWork += delegate(object sender, DoWorkEventArgs e) { e.Result = backend.Inspect(); };
             inspect.RunWorkerCompleted += delegate(object sender, RunWorkerCompletedEventArgs e)
             {
-                if (stopped || IsDisposed) return;
-                if (e.Error != null) { clearPolls = 0; status.Text = "Could not inspect Proton. Close its desktop client and retry."; return; }
+                if (stopped || IsDisposed || busy) return;
+                if (e.Error != null) { clearPolls = 0; latest = null; failed = true; failureMessage = "Could not inspect Proton. Close its desktop client and wait for another check."; UpdateState(); return; }
                 latest = (AppInspection)e.Result;
-                string selected = accounts.SelectedItem == null ? null : ((AccountInfo)accounts.SelectedItem).Path;
+                string selected = requestedAccount ?? (accounts.SelectedItem == null ? null : ((AccountInfo)accounts.SelectedItem).Path);
                 binding = true; accounts.Items.Clear();
                 foreach (AccountInfo account in latest.Accounts) { int index = accounts.Items.Add(account); if (String.Equals(account.Path, selected, StringComparison.OrdinalIgnoreCase)) accounts.SelectedIndex = index; }
                 if (selected == null && latest.Accounts.Count == 1) accounts.SelectedIndex = 0;
+                if (accounts.SelectedItem != null && String.Equals(((AccountInfo)accounts.SelectedItem).Path, requestedAccount, StringComparison.OrdinalIgnoreCase)) requestedAccount = null;
                 binding = false;
                 clearPolls = latest.Known && latest.ProtonCount == 0 ? Math.Min(2, clearPolls + 1) : 0;
-                if (failed) return;
-                if (!latest.Known) status.Text = "Proton's exit could not be verified. Close its desktop client and wait.";
-                else if (latest.ProtonCount > 0) status.Text = "Proton VPN is running. Exit it from its system-tray icon; setup will continue automatically. Discord may stay open.";
-                else if (accounts.SelectedItem == null) status.Text = latest.Accounts.Count == 0 ? "No Proton account found. Sign in to Proton once, then exit it. You can continue to the updater and browse to a settings file." : "Choose the Proton account to configure. Other saved accounts will be left unchanged.";
-                else if (clearPolls < 2) status.Text = "Confirming Proton VPN has fully exited...";
-                else
-                {
-                    busy = true; accounts.Enabled = false; continueButton.Enabled = false; timer.Stop();
-                    status.Text = "Saving first-time preferences and exact backups...";
-                    apply.RunWorkerAsync(((AccountInfo)accounts.SelectedItem).Path);
-                }
+                UpdateState();
             };
             apply.DoWork += delegate(object sender, DoWorkEventArgs e) { e.Result = setup.Apply((string)e.Argument); };
             apply.RunWorkerCompleted += delegate(object sender, RunWorkerCompletedEventArgs e)
             {
                 if (stopped || IsDisposed) return;
-                busy = false; accounts.Enabled = true; continueButton.Enabled = true;
-                if (e.Error == null) { Result = (JobResult)e.Result; Close(); }
-                else { failed = true; status.Text = e.Error.Message; retryButton.Visible = true; timer.Start(); }
+                busy = false; clearPolls = 0;
+                JobResult result = e.Error == null ? e.Result as JobResult : null;
+                if (result != null && result.Success && !setup.IsPending) { Result = result; DialogResult = DialogResult.OK; Close(); }
+                else { failed = true; failureMessage = e.Error != null ? e.Error.Message : result == null ? "Setup did not complete. Retry before continuing." : result.Message; UpdateState(); timer.Start(); }
             };
             timer.Interval = 1000; timer.Tick += delegate { Poll(); };
             Shown += delegate { Poll(); timer.Start(); };
             FormClosing += delegate(object sender, FormClosingEventArgs e) { if (busy) { e.Cancel = true; return; } stopped = true; timer.Stop(); };
+        }
+        private void UpdateState()
+        {
+            accounts.Enabled = !busy; browse.Enabled = !busy; exitButton.Enabled = !busy;
+            applyButton.Enabled = !busy && latest != null && latest.Known && latest.ProtonCount == 0 && clearPolls >= 2 && accounts.SelectedItem != null;
+            applyButton.Text = failed ? "Retry setup" : "Apply setup and open updater";
+            if (busy) status.Text = "Saving first-time preferences and exact backups...";
+            else if (failed) status.Text = failureMessage;
+            else if (latest == null) status.Text = "Checking Proton VPN and saved accounts...";
+            else if (!latest.Known) status.Text = "Proton's exit could not be verified. Close its desktop client and wait.";
+            else if (latest.ProtonCount > 0) status.Text = "Proton VPN is running. Exit it from its system-tray icon to unlock setup. Discord may stay open.";
+            else if (accounts.SelectedItem == null) status.Text = latest.Accounts.Count == 0 ? "No Proton account found. Sign in to Proton once, then exit it, or browse to its account settings. Setup must finish before the updater can open." : "Choose the Proton account to configure. Other saved accounts will be left unchanged.";
+            else if (clearPolls < 2) status.Text = "Confirming Proton VPN has fully exited...";
+            else status.Text = "Proton VPN has fully exited. Click Apply setup and open updater to finish the required setup.";
         }
         private void Poll() { if (!busy && !stopped && !inspect.IsBusy) inspect.RunWorkerAsync(); }
         protected override void Dispose(bool disposing)

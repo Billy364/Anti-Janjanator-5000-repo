@@ -17,7 +17,8 @@ class GuiPolicyTests
         state.UnknownCount=0; state.Known=false; Check(!UiPolicy.CanRefresh(state, 2, false, account), "Failed inspection unlocked refresh.");
         state.Known=true; Check(!UiPolicy.CanRefresh(state, 2, true, account) && !UiPolicy.CanClose(state,true), "Busy state permitted another operation.");
         Check(!UiPolicy.CanRefresh(state,2,false,null), "Missing account unlocked refresh.");
-        account.Ready=false; Check(!UiPolicy.CanRefresh(state,2,false,account), "Disabled Include mode unlocked refresh.");
+        account.NeedsSplitTunnelingActivation=true; Check(UiPolicy.CanRefresh(state,2,false,account), "Automatic activation account blocked refresh.");
+        account.Ready=false; Check(!UiPolicy.CanRefresh(state,2,false,account), "Unsupported account unlocked refresh.");
         account.Ready=true; state.ScanReady=false; Check(!UiPolicy.CanRefresh(state,2,false,account), "Incomplete scan unlocked refresh.");
         Console.WriteLine("PASS: GUI enablement policy covers unknown, running, stopped, busy, helper/unknown, account, and scan states.");
         return 0;

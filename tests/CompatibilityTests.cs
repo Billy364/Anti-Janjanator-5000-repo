@@ -21,7 +21,7 @@ class CompatibilityTests
             if (DelayNextScan) { DelayNextScan = false; ScanStarted.Set(); if (!ReleaseScan.WaitOne(5000)) throw new Exception("Fixture scan timed out."); }
             AppInspection state = new AppInspection { DiscordCount = captured ? 1 : 0, ScanReady = true, ScanDetail = "Fixture scan" };
             state.Roots.Add("C:\\Fixture\\Discord");
-            state.Accounts.Add(new AccountInfo { Path = "C:\\Fixture\\UserSettings.fixture.json", Display = "Example account", Ready = true });
+            state.Accounts.Add(new AccountInfo { Path = "C:\\Fixture\\UserSettings.fixture.json", Display = "Example account", Ready = true, NeedsSplitTunnelingActivation = true, Detail = "Split tunneling is off. Refresh will enable Include mode and update Discord's rules automatically." });
             return state;
         }
         public JobResult Execute(OperationRequest request, Action<string> log) { Running = false; return new JobResult { Success = true, Action = "Close", Message = "Fixture apps exited." }; }
@@ -34,10 +34,10 @@ class CompatibilityTests
         Directory.CreateDirectory(args[0]); string path = Path.Combine(args[0], "UserSettings.fixture.json");
         File.WriteAllText(path, "{\"IsUserSettingsMigrationDone\":\"true\"}");
         AccountInfo account = DesktopBackend.ReadAccount(path);
-        Check(!account.Ready && account.Detail.Contains("off") && !account.Detail.Contains("Unsupported"), "Default account is incorrectly unsupported.");
+        Check(account.Ready && account.NeedsSplitTunnelingActivation && account.Detail.Contains("Refresh will enable"), "Default account cannot use automatic activation.");
         File.WriteAllText(path, "{\"IsSplitTunnelingEnabled\":\"true\"}");
         account = DesktopBackend.ReadAccount(path);
-        Check(!account.Ready && account.Detail.Contains("Exclude mode"), "Missing mode did not use Proton's Standard default.");
+        Check(account.Ready && account.NeedsSplitTunnelingActivation && account.Detail.Contains("Exclude mode"), "Exclude mode cannot use automatic activation.");
         foreach (string json in new string[] {
             "{\"IsSplitTunnelingEnabled\":\"true\",\"SplitTunnelingMode\":\"Inverse\"}",
             "{\"IsSplitTunnelingEnabled\":\"true\",\"SplitTunnelingMode\":\"Inverse\",\"SplitTunnelingInverseAppsList\":null}",
@@ -85,6 +85,7 @@ class CompatibilityTests
                     else if (phase == 3 && form.LastInspection != null && form.LastInspection.AppsExited && form.RefreshRulesButton.Enabled)
                     {
                         Check(form.LastInspection.DiscordCount == 0 && !form.CloseAppsButton.Enabled, "Pre-close running snapshot overwrote shutdown.");
+                        using (Bitmap preview = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(preview, new Rectangle(Point.Empty, preview.Size)); preview.Save(Path.Combine(args[0], "automatic-activation.png")); }
                         phase = 4; steps.Stop(); form.Close();
                     }
                 }

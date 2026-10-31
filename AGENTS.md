@@ -57,13 +57,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 
 The script compiles the C# interface for x64, embeds the header artwork and ICO,
 copies the required workers and documentation, and creates a portable ZIP.
-For the current v9 source, outputs are:
+For the current v10 source, outputs are:
 
 - `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`
 - `dist\Anti-Janjanator-5000\Open Anti-Janjanator 5000.cmd`
 - `dist\Anti-Janjanator-5000\UpdaterWorker.ps1`
 - `dist\Anti-Janjanator-5000\Update-DiscordRules.ps1`
-- `dist\Anti-Janjanator-5000-v9.zip`
+- `dist\Anti-Janjanator-5000-v10.zip`
 
 Distribute the generated ZIP or the entire app folder, not just the EXE: the
 PowerShell workers must stay beside it. The build is unsigned. The
@@ -124,7 +124,8 @@ release versions, keep the assembly version, `VERSION.txt`, ZIP name,
 ## Preserve these behaviors
 
 - Keep Close and Refresh separate. Refresh requires two clear UI polls, a
-  complete scan, and a compatible selected Include-mode account.
+  complete scan, and a compatible selected account. The GUI's Refresh action
+  enables Split tunneling in Include mode if needed, together with its rule update.
 - Keep independent process checks in the worker and immediately before writing;
   the enabled UI button alone is not a write guard.
 - Target verified Discord paths and the current Windows session. An unreadable
@@ -132,17 +133,23 @@ release versions, keep the assembly version, `VERSION.txt`, ZIP name,
 - Preserve unrelated Included apps and settings, detect concurrent changes, and
   create an exact backup for each actual change. A no-op must not write a backup.
 - Proton can omit default preference keys. Treat missing enabled/mode values as
-  off/Standard and give setup guidance. If Include mode is explicitly enabled,
-  Refresh may create an omitted/null saved Included-app list. Do not enable or
-  change the VPN mode during a normal Refresh. Reject stale process inspections
-  from before Close and ignore processes that exit during image lookup.
+  off/Standard. The GUI worker opts into enabling Include mode and creating an
+  omitted/null app list. Commit activation and rules in one atomic replacement
+  with one exact backup. The legacy CLI reader remains strict unless explicitly
+  opted in. Reject stale process inspections from before Close and ignore
+  processes that exit during image lookup.
 - Leave the Proton background service running. Do not automatically reopen the
   apps, reconnect the VPN, or claim that UI tests verify VPN traffic routing.
 - First successful launch per Windows user may configure the selected account
   and global startup preference as described in `docs/FIRST-LAUNCH.md`. Preserve
   unrelated values and exclusions, require Proton's exit, back up changed files,
   and write the persistent completion marker only after successful verification.
-  Later launches must skip setup and preserve subsequent manual preferences.
+  Before the first completion, the user must select an account, exit Proton,
+  and explicitly click the setup button. Disable it until two clear checks.
+  Cancel/X, errors, missing accounts, and unverified completion must exit or
+  remain at setup, never open the main updater. Later launches skip completed
+  setup. Clicking Refresh may re-enable Include mode; do not reapply unrelated
+  startup, protocol, or location preferences during normal Refresh.
 - Never commit account settings, credentials, backups, request/result records,
   logs, or personal filesystem paths. Keep `dist/` and `artifacts/` ignored.
 

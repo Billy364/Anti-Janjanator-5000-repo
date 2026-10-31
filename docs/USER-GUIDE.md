@@ -16,31 +16,32 @@ removed when the updater exits.
 On the first launch, a setup window configures Proton VPN for the selected
 account: start with Windows and auto-connect, Fastest country excluding Brazil,
 Proton Protocols with Proton WireGuard, and Split tunneling in Include mode where
-supported. Exit Proton from its tray icon and choose an account if needed; the
-setup then runs automatically and opens the usual interface. It does not close
+supported. Exit Proton from its tray icon and choose an account if needed, then
+click **Apply setup and open updater**. The button is disabled until Proton's
+exit is verified. Successful setup opens the usual interface. It does not close
 Discord or reconnect the VPN. Reopen Proton afterward so it applies the settings
 and registers startup with Windows.
 
 The completed setup is remembered per Windows user across portable-folder moves
-and app updates. Later launches leave those preferences alone. If setup fails or
-you choose **Continue without setup**, it is retried on a later launch. Details
+and app updates. Later launches skip completed setup. There is no skip option:
+Exit/X closes the program, and failed setup must be retried before continuing.
+Normal Refresh may enable Include mode again but leaves other setup preferences alone. Details
 and restoration instructions are in FIRST-LAUNCH.md.
 
 1. Check the two status cards. They update automatically while the window is open.
 2. If more than one Proton account is listed, choose the settings file for the
-   account you use. The saved time can help identify it. The account needs Split
-   tunneling in **Include mode**; first-launch setup requests this automatically.
-   If you skipped it or Proton did not enable it, enable it in Proton first.
+   account you use. The saved time can help identify it. If Split tunneling is off
+   or uses Exclude mode, Refresh will enable Include mode automatically.
 3. Click **1. Close both apps**. It closes Discord (including its helpers) and
    the Proton desktop client. It works without selecting a Proton account.
 4. Once both apps are verified as exited, **2. Refresh split tunneling rules**
-   becomes available. Click it to update the selected account's Included apps.
+   becomes available. Click it to enable Include mode if needed and update the
+   selected account's Included apps in one backed-up settings change.
 5. Open Proton VPN yourself and reconnect, then reopen Discord.
 
 Newly signed-in accounts may omit default settings. This is supported: the app
-shows off/Exclude mode guidance rather than treating omitted keys as an unknown
-format. If Include mode is enabled but its list has never been saved, Refresh
-creates the list. It does not silently enable or change your VPN mode. See
+recognizes off/Exclude mode rather than treating omitted keys as an unknown
+format. Refresh enables Include mode and creates the list if needed. See
 TROUBLESHOOTING.md if a previous version showed Unsupported Proton settings
 format or the status remains unverified after shutdown.
 

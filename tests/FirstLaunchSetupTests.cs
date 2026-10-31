@@ -21,6 +21,8 @@ class FirstLaunchSetupTests
     { DateTime until = DateTime.UtcNow.AddMilliseconds(milliseconds); while (DateTime.UtcNow < until) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
     static void PrepareForm(FirstLaunchForm form)
     { form.ShowInTaskbar = false; form.Opacity = 0; form.StartPosition = FormStartPosition.Manual; form.Location = new Point(-20000, -20000); form.Show(); }
+    static void Click(Button button)
+    { button.BeginInvoke(new MethodInvoker(delegate { button.PerformClick(); })); Application.DoEvents(); }
     class Fixture
     {
         public string Folder, Account, Global, State;
@@ -147,22 +149,48 @@ class FirstLaunchSetupTests
         Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
         using (FirstLaunchForm form = new FirstLaunchForm(backend, firstUi.Service(delegate { if (backend.ProtonCount > 0) throw new IOException("Fake Proton is running"); })))
         {
-            PrepareForm(form); Pump(1250); Check(form.Result == null && !File.Exists(Path.Combine(firstUi.State, "FirstLaunchSetup.json")), "Form applied while Proton was running.");
+            PrepareForm(form); Pump(1250); Check(form.Result == null && !form.ApplySetupButton.Enabled && !File.Exists(Path.Combine(firstUi.State, "FirstLaunchSetup.json")), "Form allowed setup while Proton was running.");
+            Click(form.ApplySetupButton); Check(form.Result == null, "Disabled setup button was bypassed.");
+            backend.ProtonCount = 0; Pump(2500); Check(form.Result == null && form.ApplySetupButton.Enabled && firstUi.Service(delegate { }).IsPending, "Setup did not wait for an explicit click after Proton exited.");
             using (Bitmap preview = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(preview, new Rectangle(Point.Empty, preview.Size)); preview.Save(Path.Combine(root, "first-launch-preview.png")); }
-            backend.ProtonCount = 0; Pump(2500); Check(form.Result != null && form.Result.Success, "Form did not automatically apply after two clear polls.");
+            Click(form.ApplySetupButton); Pump(350); Check(form.Result != null && form.Result.Success, "Setup click did not complete after verified exit.");
         }
-        Console.WriteLine("PASS: First-launch form waits for Proton exit, applies automatically, and renders with example data.");
+        Console.WriteLine("PASS: First-launch setup is disabled until Proton exits, waits for an explicit click, then completes and renders with example data.");
 
         Fixture multi = new Fixture(root, "multi-ui", false); string second = Path.Combine(multi.Folder, "UserSettings.second.json"); File.Copy(multi.Account, second);
         backend = new FixtureBackend(); backend.Accounts.Add(new AccountInfo { Path = multi.Account, Display = "Account one" }); backend.Accounts.Add(new AccountInfo { Path = second, Display = "Account two" });
         using (FirstLaunchForm form = new FirstLaunchForm(backend, multi.Service(delegate { })))
         {
-            PrepareForm(form); Pump(1250); Check(form.Result == null, "Form guessed an account on a multi-account PC.");
+            PrepareForm(form); Pump(1250); Check(form.Result == null && !form.ApplySetupButton.Enabled, "Form guessed an account on a multi-account PC.");
             ComboBox choice = (ComboBox)form.Controls.Find("FirstLaunchAccount", true)[0]; Check(choice.SelectedIndex == -1, "An account was preselected.");
-            choice.SelectedIndex = 1; Pump(2500); Check(form.Result != null && form.Result.Success, "Selected account was not configured.");
+            choice.SelectedIndex = 1; Pump(2500); Check(form.Result == null && form.ApplySetupButton.Enabled, "Choosing an account bypassed the required click.");
+            Click(form.ApplySetupButton); Pump(350); Check(form.Result != null && form.Result.Success, "Selected account was not configured.");
         }
         Check(Equal(multi.AccountBefore, File.ReadAllBytes(multi.Account)) && (string)Read(second)["VpnProtocol"] == "ProTunUdp", "Multi-account setup changed the wrong account.");
         Console.WriteLine("PASS: Multi-account first launch requires a selection and only configures that account.");
+
+        Fixture canceled = new Fixture(root, "canceled", false); FirstLaunchSetup pending = canceled.Service(delegate { }); JobResult gateResult;
+        Check(!pending.RunRequiredSetup(delegate { return null; }, out gateResult), "Canceled setup opened the updater.");
+        Check(!pending.RunRequiredSetup(delegate { return new JobResult { Success = true }; }, out gateResult), "A success result without a completion marker opened the updater.");
+        Unchanged(canceled);
+        using (FirstLaunchForm form = new FirstLaunchForm(new FixtureBackend(), pending))
+        {
+            PrepareForm(form); Pump(1250); Check(!form.ApplySetupButton.Enabled, "Setup with no account was enabled.");
+            form.Close(); Check(form.Result == null && pending.IsPending, "Closing setup fabricated completion.");
+        }
+        Check(pending.RunRequiredSetup(delegate { return pending.Apply(canceled.Account); }, out gateResult) && gateResult.Success, "Completed setup did not unlock startup.");
+        Check(pending.RunRequiredSetup(delegate { throw new Exception("Completed startup must not show setup again."); }, out gateResult), "Later launch did not skip completed setup.");
+        Console.WriteLine("PASS: Cancel/X, no account, and missing completion records cannot open the updater; verified completion unlocks later launches.");
+
+        Fixture retryUi = new Fixture(root, "retry-ui", false); bool failOnce = true; backend = new FixtureBackend(); backend.Accounts.Add(new AccountInfo { Path = retryUi.Account, Display = "Example retry account" });
+        using (FirstLaunchForm form = new FirstLaunchForm(backend, retryUi.Service(delegate { if (failOnce) { failOnce = false; throw new IOException("Synthetic setup failure; retry required."); } })))
+        {
+            PrepareForm(form); Pump(2500); Check(form.ApplySetupButton.Enabled, "Retry fixture was not ready for its first click."); Click(form.ApplySetupButton); Pump(350);
+            Check(!failOnce && form.Result == null && form.Visible && retryUi.Service(delegate { }).IsPending, "Failed setup progressed into the updater or was not attempted.");
+            Pump(2500); Check(form.ApplySetupButton.Enabled && form.ApplySetupButton.Text == "Retry setup", "Failure could not be retried after fresh exit checks.");
+            Click(form.ApplySetupButton); Pump(350); Check(form.Result != null && form.Result.Success, "Required setup retry did not complete.");
+        }
+        Console.WriteLine("PASS: Setup errors keep the user at setup; an explicit successful retry is required to continue.");
         return 0;
     }
 }

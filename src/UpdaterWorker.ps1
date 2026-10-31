@@ -45,17 +45,19 @@ function Invoke-InterfaceOperation {
     if ($roots.Count -eq 0) { throw 'No Discord installation is selected or detected.' }
     if ([string]::IsNullOrWhiteSpace([string]$Request.SettingsPath)) { throw 'Select a Proton account settings file.' }
     $inventory = @(Get-DiscordInventory $roots)
-    $snapshot = Read-ProtonSettings ([string]$Request.SettingsPath)
+    $snapshot = Read-ProtonSettings -Path ([string]$Request.SettingsPath) -EnableSplitTunneling
     $plan = New-DiscordRulePlan $snapshot $roots $inventory
     Assert-DesktopAppsExited $roots
     $backup = Write-DiscordRulePlan $snapshot $plan $roots $inventory
     foreach ($path in $plan.Added) { Write-Host ('ADD ' + $path) }
     foreach ($path in $plan.Removed) { Write-Host ('REMOVE ' + $path) }
     $message = 'Rules refreshed. Open Proton VPN and reconnect before reopening Discord.'
+    if ($plan.EnabledSplitTunneling) { $message = 'Saved Split tunneling ON in Include mode and refreshed Discord rules. Open Proton VPN and reconnect to apply the settings.' }
     if (-not $plan.Changed) { $message = 'The rules are already current. Open Proton VPN and reconnect before reopening Discord.' }
     return [pscustomobject]@{
         Success = $true; Action = 'Refresh'; Message = $message
         Total = $plan.DesiredPaths.Count; Added = @($plan.Added); Removed = @($plan.Removed); BackupPath = $backup
+        EnabledSplitTunneling = $plan.EnabledSplitTunneling
     }
 }
 

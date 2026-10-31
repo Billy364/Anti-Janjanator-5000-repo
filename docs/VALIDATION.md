@@ -1,5 +1,21 @@
 # Interface validation — October 30, 2026
 
+V10 passed the complete runner with mandatory setup and automatic activation
+coverage. Setup waits for two clear Proton exit checks, requires an account and
+explicit click, and rejects startup after Cancel/X, no account, errors, or a
+missing completion marker. An explicit successful retry unlocks startup; later
+launches skip verified completion. The setup form and main activation message
+were rendered with fixture data and visually checked.
+
+GUI Refresh tests enable Include mode from missing/off/Exclude/null preferences,
+preserve unrelated settings/app/IP lists and opaque bytes/BOM, create one exact
+backup for flags and rules together, and perform a no-op on repeat. A flag-only
+change is written even when Discord rules are already current. Running apps,
+late restarts, concurrent settings edits, and unsupported schemas prevent both
+activation and rule changes. The legacy non-opted-in CLI reader remains strict.
+All tests use synthetic write targets; actual Proton account restrictions and
+live VPN routing remain outside this validation.
+
 V9 passed the complete runner with additional sparse-settings and process-race
 coverage. Account-reader fixtures check omitted off/Standard defaults, disabled
 and Exclude modes, missing/null/empty Include lists, and unsupported types/values.
