@@ -1,8 +1,14 @@
-## Unreleased
+# Changelog
+
+## v12
+
+- Restored the original header artwork and multi-size executable, window,
+  setup-window, and system-tray icon from the initial repository version.
+- Updated website branding/favicon and app screenshots to use that artwork.
+
+## Previous unreleased updates
 
 - Rename the app to Democracy Enforcer 5000, including the executable, launcher, window, tray, portable package, and website. Preserve existing setup completion records and account settings.
-
-# Changelog
 
 ## v11
 

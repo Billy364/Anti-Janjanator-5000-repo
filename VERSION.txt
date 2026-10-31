@@ -1,4 +1,6 @@
-Democracy Enforcer 5000 - Windows interface edition v11
+Democracy Enforcer 5000 - Windows interface edition v12
+Restored the original artwork and multi-size application/title-bar/tray icon.
+Website favicon, branding artwork, and example screenshots match the app again.
 Successful GUI Refresh launches Proton immediately, including already-current
 rules. Close and failed refreshes do not launch it; Discord remains closed.
 Launch failures are reported separately without undoing saved settings/backups.

@@ -57,13 +57,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 
 The script compiles the C# interface for x64, embeds the header artwork and ICO,
 copies the required workers and documentation, and creates a portable ZIP.
-For the current v11 source, outputs are:
+For the current v12 source, outputs are:
 
 - `dist\Democracy-Enforcer-5000\Democracy Enforcer 5000.exe`
 - `dist\Democracy-Enforcer-5000\Open Democracy Enforcer 5000.cmd`
 - `dist\Democracy-Enforcer-5000\UpdaterWorker.ps1`
 - `dist\Democracy-Enforcer-5000\Update-DiscordRules.ps1`
-- `dist\Democracy-Enforcer-5000-v11.zip`
+- `dist\Democracy-Enforcer-5000-v12.zip`
 
 Distribute the generated ZIP or the entire app folder, not just the EXE: the
 PowerShell workers must stay beside it. The build is unsigned. The

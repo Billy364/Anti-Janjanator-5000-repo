@@ -13,8 +13,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("Democracy Enforcer 5000")]
 [assembly: System.Reflection.AssemblyProduct("Democracy Enforcer 5000")]
 [assembly: System.Reflection.AssemblyDescription("Discord rules updater for Proton VPN split tunneling")]
-[assembly: System.Reflection.AssemblyVersion("11.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("11.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("12.0.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("12.0.0.0")]
 
 namespace DiscordProtonUpdater
 {

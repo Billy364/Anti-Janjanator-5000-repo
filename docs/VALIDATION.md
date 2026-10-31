@@ -1,4 +1,12 @@
-# Interface validation — October 30, 2026
+# Interface validation — October 31, 2026
+
+V12 restores the exact initial PNG and ICO assets from commit 45b259f. The
+compiler embeds the same ICO as the native executable icon and runtime icon;
+the main window, first-launch window, and tray load that embedded resource.
+The complete regression runner passed after restoration. Fixture renders were
+checked for the original artwork, icon, and the current Democracy Enforcer name.
+README/website screenshots and the website favicon/brand artwork match the app.
+The asset-only restoration does not change setup, settings writes, or launches.
 
 V11 passed the complete runner with mocked post-refresh launches. Successful
 and no-op refreshes request one Proton launch after settings are saved. All

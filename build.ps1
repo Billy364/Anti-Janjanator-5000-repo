@@ -22,7 +22,7 @@ Copy-Item -LiteralPath "$PSScriptRoot\docs\FIRST-LAUNCH.md" -Destination $destin
 Copy-Item -LiteralPath "$PSScriptRoot\docs\TROUBLESHOOTING.md" -Destination $destination
 [void][IO.Directory]::CreateDirectory((Join-Path $destination 'assets'))
 Copy-Item -LiteralPath "$PSScriptRoot\assets\HeaderArtwork.png", "$PSScriptRoot\assets\AppIcon.ico" -Destination (Join-Path $destination 'assets')
-$archive = Join-Path $PSScriptRoot 'dist\Democracy-Enforcer-5000-v11.zip'
+$archive = Join-Path $PSScriptRoot 'dist\Democracy-Enforcer-5000-v12.zip'
 Compress-Archive -LiteralPath $destination -DestinationPath $archive -Force
 Write-Output "Built: $executable"
 Write-Output "Packaged: $archive"

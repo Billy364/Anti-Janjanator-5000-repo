@@ -81,7 +81,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 Open `dist\Democracy-Enforcer-5000\Democracy Enforcer 5000.exe`. Keep the generated
 folder together: the two PowerShell workers are needed at runtime. The build
-also creates `dist\Democracy-Enforcer-5000-v11.zip` for sharing. Builds are unsigned.
+also creates `dist\Democracy-Enforcer-5000-v12.zip` for sharing. Builds are unsigned.
 
 ## Verify
 
