@@ -1,5 +1,18 @@
 # Interface validation — October 30, 2026
 
+V11 passed the complete runner with mocked post-refresh launches. Successful
+and no-op refreshes request one Proton launch after settings are saved. All
+rejected operations and Close request no launches. Launch/lookup failure retains
+successful settings and backups, reports a separate warning, and permits a later
+retry. Discovery prefers the stable launcher and selects the newest versioned
+client as fallback. Mock assertions require Proton's own working directory and
+forbid unexpected executables, preventing real app launches during the tests.
+
+A form test simulates Proton starting after Refresh and verifies the success/
+connection message stays visible while further Refresh is locked. Its fixture
+render was visually checked. The tests verify launch requests and result handling,
+not a live Proton startup, account login, or VPN tunnel connection.
+
 V10 passed the complete runner with mandatory setup and automatic activation
 coverage. Setup waits for two clear Proton exit checks, requires an account and
 explicit click, and rejects startup after Cancel/X, no account, errors, or a

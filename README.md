@@ -15,7 +15,8 @@ the intended account if more than one Proton account is saved on the PC.
 - Automatically enables Split tunneling in Include mode when you click Refresh.
 - Preserves unrelated Included apps and preferences, with an exact backup for
   every actual change.
-- Leaves the apps closed; reopen Proton, reconnect, then open Discord.
+- Opens Proton immediately after successful Refresh; wait for its connection
+  before opening Discord, which stays closed.
 - Includes the supplied artwork as the header, application icon, and tray icon.
 
 Proton's background VPN service stays running. This unofficial utility was
@@ -33,8 +34,9 @@ Included apps are preserved.
 Choose an account if more than one is saved, and exit Proton from its tray icon.
 Click **Apply setup and open updater** once its exit is verified. First-time
 setup is required: there is no skip option, and Exit/X closes the program. The
-same updater interface opens only after successful setup. Reopen Proton afterward to apply the preferences and register
-Windows startup. Discord can stay open during this setup step.
+same updater interface opens only after successful setup. Refresh Discord's
+rules next; Proton opens afterward to apply the preferences and register Windows
+startup. Discord can stay open during the setup step.
 
 Successful setup is remembered outside the app folder. Future launches and
 newly extracted app versions skip completed setup. An explicit Refresh may
@@ -55,7 +57,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 Open `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`. Keep the generated
 folder together: the two PowerShell workers are needed at runtime. The build
-also creates `dist\Anti-Janjanator-5000-v10.zip` for sharing. Builds are unsigned.
+also creates `dist\Anti-Janjanator-5000-v11.zip` for sharing. Builds are unsigned.
 
 ## Verify
 
@@ -74,6 +76,11 @@ exit, click Refresh: it enables Include mode and creates the Discord entries in
 one saved update with an exact backup. There is no manual Proton mode setup. See
 [troubleshooting](docs/TROUBLESHOOTING.md) for the former unsupported-format error
 and uncertain process status.
+
+Successful Refresh launches Proton even when its rules are already current.
+If Proton already restarted, another copy is not launched. If launching fails,
+the saved rules and backup remain valid; the activity log explains that Proton
+must be opened manually. Launching the app does not prove the VPN is connected.
 
 ## Repository layout
 

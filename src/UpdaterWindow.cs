@@ -13,8 +13,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyProduct("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyDescription("Discord rules updater for Proton VPN split tunneling")]
-[assembly: System.Reflection.AssemblyVersion("10.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("10.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("11.0.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("11.0.0.0")]
 
 namespace DiscordProtonUpdater
 {
@@ -62,6 +62,8 @@ namespace DiscordProtonUpdater
         public string[] Added { get; set; }
         public string[] Removed { get; set; }
         public bool EnabledSplitTunneling { get; set; }
+        public string ProtonLaunchStatus { get; set; }
+        public string ProtonLaunchWarning { get; set; }
     }
     public interface IUpdaterBackend
     {
@@ -315,6 +317,7 @@ namespace DiscordProtonUpdater
         private bool closing;
         private int inspectionGeneration, pendingInspectionGeneration;
         private string successText;
+        private bool refreshSucceeded;
         private Label protonStatus, discordStatus, protonDetail, discordDetail, warning, scanDetail, accountDetail, footer;
         private ComboBox accounts;
         private Button closeButton, refreshButton;
@@ -372,7 +375,9 @@ namespace DiscordProtonUpdater
                 JobResult result = e.Error == null ? (JobResult)e.Result : new JobResult { Success = false, Message = e.Error.Message };
                 if (result.Success)
                 {
+                    refreshSucceeded = result.Action == "Refresh";
                     successText = result.Message; AppendLog("SUCCESS: " + result.Message);
+                    if (!String.IsNullOrEmpty(result.ProtonLaunchWarning)) AppendLog("WARNING: " + result.ProtonLaunchWarning);
                     if (result.Action == "Refresh") AppendLog("Discord executable rules: " + result.Total);
                     if (!String.IsNullOrEmpty(result.BackupPath)) AppendLog("Backup: " + result.BackupPath);
                 }
@@ -531,6 +536,7 @@ namespace DiscordProtonUpdater
             string text;
             if (busy) text = "Working... The buttons stay locked until the current operation finishes.";
             else if (!last.Known || last.UnknownCount > 0) text = last.UnverifiedProcesses.Count > 0 ? "Cannot verify process paths: " + String.Join(", ", last.UnverifiedProcesses.ToArray()) + ". Refresh stays locked." : "App status cannot be fully verified. Refresh is locked. Close any inaccessible apps manually, then reload.";
+            else if (refreshSucceeded && !String.IsNullOrEmpty(successText) && last.ProtonCount > 0 && last.DiscordCount == 0) text = successText;
             else if (!last.AppsExited) text = "Apps are running. Click Close both apps; Refresh unlocks only after all matching processes have exited.";
             else if (clearPolls < 2) text = "Confirming both apps have fully exited...";
             else if (!last.ScanReady) text = last.ScanDetail;
@@ -548,7 +554,7 @@ namespace DiscordProtonUpdater
             if (action == "Refresh" && !UiPolicy.CanRefresh(last, clearPolls, false, SelectedAccount)) return;
             if (action == "Close" && !UiPolicy.CanClose(last, false)) return;
             OperationRequest request = new OperationRequest { Action = action, SettingsPath = SelectedAccount == null ? null : SelectedAccount.Path, Roots = new List<string>(last.Roots) };
-            busy = true; successText = null; clearPolls = 0; inspectionGeneration++;
+            busy = true; successText = null; refreshSucceeded = false; clearPolls = 0; inspectionGeneration++;
             AppendLog(action == "Close" ? "Closing Discord and the Proton VPN desktop client..." : "Rechecking app exit, enabling Include mode if needed, and refreshing the selected account's rules...");
             RenderState(); operation.RunWorkerAsync(request);
         }

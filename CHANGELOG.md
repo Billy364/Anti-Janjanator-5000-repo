@@ -1,5 +1,17 @@
 # Changelog
 
+## v11
+
+- Launch Proton VPN immediately after successful GUI Refresh, including when
+  rules are already current. Close and failed refreshes do not reopen it.
+- Prefer the stable installed launcher, with the newest versioned client as a
+  fallback. Use Proton's own folder as the working directory to avoid locking
+  the portable updater folder. Do not launch another copy if Proton restarted.
+- Keep saved-settings success and backups when app launch fails, and report a
+  separate launch warning with manual-open guidance.
+- Keep the refresh/connection status visible when Proton starts. Added mocked
+  launch, lookup/failure/recovery, working-directory, and UI regression checks.
+
 ## v10
 
 - Made first-launch setup mandatory. Exit Proton, select the account, and click

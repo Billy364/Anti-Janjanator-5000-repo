@@ -57,13 +57,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 
 The script compiles the C# interface for x64, embeds the header artwork and ICO,
 copies the required workers and documentation, and creates a portable ZIP.
-For the current v10 source, outputs are:
+For the current v11 source, outputs are:
 
 - `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`
 - `dist\Anti-Janjanator-5000\Open Anti-Janjanator 5000.cmd`
 - `dist\Anti-Janjanator-5000\UpdaterWorker.ps1`
 - `dist\Anti-Janjanator-5000\Update-DiscordRules.ps1`
-- `dist\Anti-Janjanator-5000-v10.zip`
+- `dist\Anti-Janjanator-5000-v11.zip`
 
 Distribute the generated ZIP or the entire app folder, not just the EXE: the
 PowerShell workers must stay beside it. The build is unsigned. The
@@ -138,8 +138,13 @@ release versions, keep the assembly version, `VERSION.txt`, ZIP name,
   with one exact backup. The legacy CLI reader remains strict unless explicitly
   opted in. Reject stale process inspections from before Close and ignore
   processes that exit during image lookup.
-- Leave the Proton background service running. Do not automatically reopen the
-  apps, reconnect the VPN, or claim that UI tests verify VPN traffic routing.
+- Leave the Proton background service running. After successful GUI Refresh
+  (including an already-current result), request a Proton launch, preferring its
+  stable launcher and otherwise the newest versioned client. Use the Proton
+  executable's directory as its working directory. Close and failed refreshes
+  must not reopen apps; Discord stays closed. Avoid duplicate Proton launches.
+  Report launch failure separately from saved-settings success. Respect Proton's
+  own auto-connect setting; do not claim these tests verify VPN traffic routing.
 - First successful launch per Windows user may configure the selected account
   and global startup preference as described in `docs/FIRST-LAUNCH.md`. Preserve
   unrelated values and exclusions, require Proton's exit, back up changed files,

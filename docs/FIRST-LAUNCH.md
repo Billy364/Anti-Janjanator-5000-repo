@@ -12,7 +12,8 @@ not run merely because the account is selected or Proton exits. Setup is require
 before the main interface can open. Exit/X closes the program instead of skipping.
 After setup succeeds, the original updater opens with the same two action
 buttons and interface. Use its normal close/refresh workflow to update Discord's
-executable list, then reopen Proton and reconnect before opening Discord again.
+executable list. Refresh opens Proton automatically; wait until it is connected
+before opening Discord again.
 
 ## Preferences saved
 

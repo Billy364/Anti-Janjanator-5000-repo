@@ -6,6 +6,8 @@ $script:fakeProcesses = @()
 $script:stopped = @()
 $script:readCount = 0
 $script:injectOnRead = $false
+$script:launches = @(); $script:failLaunch = $false; $script:failResolve = $false; $script:launchAccount = $null
+$script:originalLaunchResolver = ${function:Get-ProtonLaunchPath}
 $script:originalReader = ${function:Read-ProtonSettings}
 $session = [Diagnostics.Process]::GetCurrentProcess().SessionId
 function global:Get-Process {
@@ -17,7 +19,17 @@ function global:Stop-Process {
     $script:stopped += $InputObject.Id
     $script:fakeProcesses = @($script:fakeProcesses | Where-Object { $_.Id -ne $InputObject.Id })
 }
-function global:Start-Process { [CmdletBinding()]param([string]$FilePath,[string]$WorkingDirectory,[string]$WindowStyle) throw 'GUI operations must leave the real apps closed.' }
+function Get-ProtonLaunchPath { if($script:failResolve) { throw 'Synthetic Proton installation lookup failed.' }; return $protonPath }
+function global:Start-Process {
+    [CmdletBinding()]param([string]$FilePath,[string]$WorkingDirectory,[string]$WindowStyle)
+    if($FilePath -cne $protonPath -or $WorkingDirectory -cne [IO.Path]::GetDirectoryName($protonPath) -or $WindowStyle -ne 'Normal') { throw 'Unexpected app launch or inherited working directory.' }
+    if($script:launchAccount) {
+        $saved=[IO.File]::ReadAllText($script:launchAccount)|ConvertFrom-Json
+        if($saved.IsSplitTunnelingEnabled -cne 'true' -or $saved.SplitTunnelingMode -cne 'Inverse' -or @($saved.SplitTunnelingInverseAppsList|ConvertFrom-Json).Count -eq 0) { throw 'Proton was launched before the rules and activation were saved.' }
+    }
+    $script:launches += [pscustomobject]@{Path=$FilePath;WorkingDirectory=$WorkingDirectory;WindowStyle=$WindowStyle}
+    if($script:failLaunch) { throw 'Synthetic Proton launch failure.' }
+}
 function Wait-AppGroupExit { param([scriptblock]$FindProcesses,[int]$TimeoutSeconds) return (@(& $FindProcesses).Count -eq 0) }
 function Read-ProtonSettings {
     param([string]$Path,[switch]$EnableSplitTunneling)
@@ -27,7 +39,7 @@ function Read-ProtonSettings {
     return $snapshot
 }
 function Assert-True { param([bool]$Condition,[string]$Message) if (-not $Condition) { throw $Message } }
-function Assert-Rejected { param([scriptblock]$Action,[string]$Text) $errorText=''; try { & $Action } catch { $errorText=$_.Exception.Message }; Assert-True ($errorText -like ('*'+$Text+'*')) ('Expected rejection: '+$Text+'; got '+$errorText) }
+function Assert-Rejected { param([scriptblock]$Action,[string]$Text) $launchCount=$script:launches.Count; $errorText=''; try { & $Action } catch { $errorText=$_.Exception.Message }; Assert-True ($errorText -like ('*'+$Text+'*')) ('Expected rejection: '+$Text+'; got '+$errorText); Assert-True ($script:launches.Count -eq $launchCount) 'Rejected operation launched an app.' }
 function New-FakeProcess {
     param([int]$Id,[string]$Path)
     $process = [pscustomobject]@{ Id=$Id; Path=$Path; ProcessName=[IO.Path]::GetFileNameWithoutExtension($Path); SessionId=$session }
@@ -65,20 +77,25 @@ Write-Output 'PASS: An app relaunching after the settings read blocks the write.
 $script:fakeProcesses=@()
 $result=Invoke-InterfaceOperation $request
 Assert-True ($result.Success -and $result.Total -eq 2 -and $result.Added.Count -eq 2 -and $result.Removed.Count -eq 1) 'Unexpected refresh result.'
+Assert-True ($result.ProtonLaunchStatus -eq 'Started' -and $script:launches.Count -eq 1) 'Successful refresh did not request one Proton launch.'
 Assert-True ((Get-FileHash -LiteralPath $result.BackupPath).Hash -eq $originalHash) 'Backup differs from original.'
 $after = & $script:originalReader $file
 Assert-True (@($after.Apps | Where-Object { $_.AppFilePath -eq 'C:\Other\Browser.exe' -and -not $_.IsActive }).Count -eq 1) 'Other app changed.'
 Assert-True (([IO.File]::ReadAllText($file) | ConvertFrom-Json).KeepMe -eq 'same') 'Other preference changed.'
 Write-Output 'PASS: Refresh includes main/helper executables, removes stale paths, preserves other apps/preferences, and makes an exact backup.'
 $hash=(Get-FileHash -LiteralPath $file).Hash
+$launchCount=$script:launches.Count
 $repeat=Invoke-InterfaceOperation $request
 Assert-True ($repeat.Success -and $null -eq $repeat.BackupPath -and (Get-FileHash -LiteralPath $file).Hash -eq $hash) 'Repeat refresh was not a no-op.'
-Write-Output 'PASS: Repeated refresh is a no-op and neither operation reopens an app.'
+Assert-True ($repeat.ProtonLaunchStatus -eq 'Started' -and $script:launches.Count -eq ($launchCount+1)) 'Already-current rules did not launch Proton.'
+Write-Output 'PASS: Successful and already-current refreshes request Proton once; no-op rules still cause no settings write/backup.'
 $script:fakeProcesses=@((New-FakeProcess 10 $main),(New-FakeProcess 11 $helper),(New-FakeProcess 12 $protonPath))
 $readsBefore=$script:readCount
+$launchCount=$script:launches.Count
 $closed=Invoke-InterfaceOperation ([pscustomobject]@{Action='Close';SettingsPath=$null;Roots=@($root)})
 Assert-True ($closed.Success -and $script:fakeProcesses.Count -eq 0 -and $script:stopped.Count -eq 3) 'Close did not exit all expected app processes.'
 Assert-True ($script:readCount -eq $readsBefore -and (Get-FileHash -LiteralPath $file).Hash -eq $hash) 'Close depended on account selection or changed settings.'
+Assert-True ($script:launches.Count -eq $launchCount) 'Close reopened Proton.'
 Write-Output 'PASS: Close exits both apps and helpers without an account selection, and does not refresh settings.'
 $other=New-FakeProcess 20 $protonPath;$other.SessionId=$session+1;$script:fakeProcesses=@($other)
 $differentSession=Invoke-InterfaceOperation $request
@@ -187,3 +204,39 @@ foreach($invalid in @('{"unrelated":"file"}','{"IsSplitTunnelingEnabled":true}',
     Assert-True ([IO.File]::ReadAllText($guardFile) -ceq $invalid) 'Unsupported settings partially activated split tunneling.'
 }
 Write-Output 'PASS: Automatic activation does not bypass unknown-format or invalid-list checks.'
+
+# Launch failures happen after the saved settings transaction. Keep success and
+# its backup, but report that the user must open Proton manually.
+$launchFile=Join-Path $RunFolder 'UserSettings.launch.json';$script:launchAccount=$launchFile
+[IO.File]::WriteAllText($launchFile,'{"IsUserSettingsMigrationDone":"true","IsAutoConnectEnabled":"false"}')
+$launchRequest=[pscustomobject]@{Action='Refresh';SettingsPath=$launchFile;Roots=@($root)}
+$script:failLaunch=$true
+$failedLaunch=Invoke-InterfaceOperation $launchRequest
+Assert-True ($failedLaunch.Success -and $failedLaunch.ProtonLaunchStatus -eq 'Failed' -and $failedLaunch.ProtonLaunchWarning -like '*Synthetic Proton launch failure*' -and $null -ne $failedLaunch.BackupPath) 'Launch failure incorrectly reported a failed settings transaction or lost its warning/backup.'
+$saved= & $script:originalReader $launchFile
+Assert-True ($saved.Apps.Count -eq 2 -and ([IO.File]::ReadAllText($launchFile)|ConvertFrom-Json).IsAutoConnectEnabled -ceq 'false') 'Launch failure rolled back rules or altered auto-connect.'
+$script:failLaunch=$false;$script:failResolve=$true;$launchCount=$script:launches.Count
+$missingInstall=Invoke-InterfaceOperation $launchRequest
+Assert-True ($missingInstall.Success -and $missingInstall.ProtonLaunchStatus -eq 'Failed' -and $missingInstall.ProtonLaunchWarning -like '*lookup failed*' -and $script:launches.Count -eq $launchCount -and $null -eq $missingInstall.BackupPath) 'Missing installation was not reported independently of no-op settings success.'
+$script:failResolve=$false
+$successLaunch=Invoke-InterfaceOperation $launchRequest
+Assert-True ($successLaunch.Success -and $successLaunch.ProtonLaunchStatus -eq 'Started') 'Launch could not recover after a failure.'
+Write-Output 'PASS: Launch is requested only after saved activation/rules; launch/lookup failures keep successful settings and backups, and a later retry can launch.'
+
+$script:fakeProcesses=@((New-FakeProcess 88 $protonPath));$launchCount=$script:launches.Count
+$alreadyRunning=Start-ProtonAfterRefresh
+Assert-True ($alreadyRunning -eq 'AlreadyRunning' -and $script:launches.Count -eq $launchCount) 'An existing Proton client was launched twice.'
+$script:fakeProcesses=@();$script:launchAccount=$null
+Write-Output 'PASS: A client that has already restarted is not launched again.'
+
+$installRoot=Join-Path $RunFolder 'Proton install'
+foreach($version in @('v5.1.8','v5.1.9')) {
+    $folder=Join-Path $installRoot $version;[void][IO.Directory]::CreateDirectory($folder)
+    [IO.File]::WriteAllText((Join-Path $folder 'ProtonVPN.Client.exe'),'synthetic fixture; never executed')
+}
+$fallback=& $script:originalLaunchResolver -InstallRoot $installRoot
+Assert-True ($fallback -ceq (Join-Path $installRoot 'v5.1.9\ProtonVPN.Client.exe')) 'Versioned client fallback did not select the newest install.'
+$launcher=Join-Path $installRoot 'ProtonVPN.Launcher.exe';[IO.File]::WriteAllText($launcher,'synthetic fixture; never executed')
+$preferred=& $script:originalLaunchResolver -InstallRoot $installRoot
+Assert-True ($preferred -ceq $launcher) 'Stable installed Proton launcher was not preferred.'
+Write-Output 'PASS: Launch discovery prefers the stable Proton launcher and falls back to the newest versioned client; working-directory checks prevent portable-folder locks.'

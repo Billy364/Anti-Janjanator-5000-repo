@@ -14,17 +14,22 @@ class CompatibilityTests
     class SlowBackend : IUpdaterBackend
     {
         public readonly ManualResetEvent ScanStarted = new ManualResetEvent(false), ReleaseScan = new ManualResetEvent(false);
-        public volatile bool Running = true, DelayNextScan;
+        public volatile bool Running = true, DelayNextScan, ProtonRunning;
         public AppInspection Inspect()
         {
             bool captured = Running;
             if (DelayNextScan) { DelayNextScan = false; ScanStarted.Set(); if (!ReleaseScan.WaitOne(5000)) throw new Exception("Fixture scan timed out."); }
-            AppInspection state = new AppInspection { DiscordCount = captured ? 1 : 0, ScanReady = true, ScanDetail = "Fixture scan" };
+            AppInspection state = new AppInspection { DiscordCount = captured ? 1 : 0, ProtonCount = ProtonRunning ? 1 : 0, ScanReady = true, ScanDetail = "Fixture scan" };
             state.Roots.Add("C:\\Fixture\\Discord");
             state.Accounts.Add(new AccountInfo { Path = "C:\\Fixture\\UserSettings.fixture.json", Display = "Example account", Ready = true, NeedsSplitTunnelingActivation = true, Detail = "Split tunneling is off. Refresh will enable Include mode and update Discord's rules automatically." });
             return state;
         }
-        public JobResult Execute(OperationRequest request, Action<string> log) { Running = false; return new JobResult { Success = true, Action = "Close", Message = "Fixture apps exited." }; }
+        public JobResult Execute(OperationRequest request, Action<string> log)
+        {
+            Running = false;
+            if (request.Action == "Refresh") { ProtonRunning = true; return new JobResult { Success = true, Action = "Refresh", ProtonLaunchStatus = "Started", Message = "Rules refreshed. Proton VPN launch requested. Wait until it is connected before reopening Discord." }; }
+            return new JobResult { Success = true, Action = "Close", Message = "Fixture apps exited." };
+        }
         public void AddRoot(string path) { }
         public void AddAccount(string path) { }
     }
@@ -86,7 +91,14 @@ class CompatibilityTests
                     {
                         Check(form.LastInspection.DiscordCount == 0 && !form.CloseAppsButton.Enabled, "Pre-close running snapshot overwrote shutdown.");
                         using (Bitmap preview = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(preview, new Rectangle(Point.Empty, preview.Size)); preview.Save(Path.Combine(args[0], "automatic-activation.png")); }
-                        phase = 4; steps.Stop(); form.Close();
+                        form.RefreshRulesButton.PerformClick(); phase = 4;
+                    }
+                    else if (phase == 4 && form.LastInspection != null && form.LastInspection.ProtonCount == 1)
+                    {
+                        Label warning = (Label)typeof(UpdaterForm).GetField("warning", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(form);
+                        Check(warning.Text.Contains("Proton VPN launch requested") && !form.RefreshRulesButton.Enabled, "Post-refresh UI invited another Close instead of showing launch status.");
+                        using (Bitmap preview = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(preview, new Rectangle(Point.Empty, preview.Size)); preview.Save(Path.Combine(args[0], "proton-launched.png")); }
+                        phase = 5; steps.Stop(); form.Close();
                     }
                 }
                 catch (Exception error) { failure = error; backend.ReleaseScan.Set(); steps.Stop(); form.Close(); }
@@ -96,11 +108,12 @@ class CompatibilityTests
             {
                 Application.Run(form);
                 if (failure != null) throw failure;
-                Check(phase == 4, "Post-close fresh polls were not verified.");
+                Check(phase == 5, "Post-close fresh polls and post-refresh Proton status were not verified.");
             }
             finally { backend.ReleaseScan.Set(); }
         }
         Console.WriteLine("PASS: A delayed pre-close inspection cannot overwrite shutdown; fresh post-close polls unlock refresh.");
+        Console.WriteLine("PASS: Proton's post-refresh running state keeps the launch/connection message and locks further Refresh.");
         return 0;
     }
 }

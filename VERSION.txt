@@ -1,4 +1,8 @@
-Anti-Janjanator 5000 - Windows interface edition v10
+Anti-Janjanator 5000 - Windows interface edition v11
+Successful GUI Refresh launches Proton immediately, including already-current
+rules. Close and failed refreshes do not launch it; Discord remains closed.
+Launch failures are reported separately without undoing saved settings/backups.
+Uses the stable Proton launcher or newest client with its own working directory.
 First-launch setup is mandatory: exit Proton, select the account, and click
 Apply setup and open updater. Exit/X and errors cannot bypass setup.
 GUI Refresh enables Split tunneling in Include mode automatically, saving
@@ -17,7 +21,7 @@ marker prevent overwriting preferences on later launches. Main UI retained.
 Renamed executable, window title, interface heading, tray tooltip/menu, and
 Windows file product/title metadata. Discord/Proton refresh behavior unchanged.
 Live status cards, separate close and refresh buttons, disabled refresh until
-verified app exit, account picker, exact backups, and no automatic app restart.
+verified app exit, account picker, exact backups, and post-refresh Proton launch.
 Embedded proportional header artwork beside the title.
 Matching multi-size application/title-bar icon and a system-tray icon with
 Open Anti-Janjanator 5000 and Exit commands.

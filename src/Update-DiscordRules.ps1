@@ -452,7 +452,7 @@ function Write-DiscordRulePlan {
 }
 
 function Get-ProtonClientPath {
-    $baseFolder = Join-Path $env:ProgramFiles 'Proton\VPN'
+    param([string]$baseFolder = (Join-Path $env:ProgramFiles 'Proton\VPN'))
     $versions = @(Get-ChildItem -LiteralPath $baseFolder -Directory | Where-Object {
         $_.Name -match '^v\d+(\.\d+){1,3}$' -and
         (Test-Path -LiteralPath (Join-Path $_.FullName 'ProtonVPN.Client.exe') -PathType Leaf)

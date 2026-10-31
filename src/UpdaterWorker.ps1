@@ -14,6 +14,22 @@ function Assert-DesktopAppsExited {
     Assert-AppsClosed $Roots
 }
 
+function Get-ProtonLaunchPath {
+    param([string]$InstallRoot = (Join-Path $env:ProgramFiles 'Proton\VPN'))
+    $launcher = Join-Path $InstallRoot 'ProtonVPN.Launcher.exe'
+    if (Test-Path -LiteralPath $launcher -PathType Leaf) { return [IO.Path]::GetFullPath($launcher) }
+    return Get-ProtonClientPath -BaseFolder $InstallRoot
+}
+
+function Start-ProtonAfterRefresh {
+    if (@(Get-ProtonAppProcesses).Count -gt 0) { return 'AlreadyRunning' }
+    $client = Get-ProtonLaunchPath
+    # The launcher must not inherit the portable updater folder as its current
+    # directory, otherwise Windows may prevent deleting that folder afterward.
+    Start-Process -FilePath $client -WorkingDirectory ([IO.Path]::GetDirectoryName($client)) -WindowStyle Normal -ErrorAction Stop
+    return 'Started'
+}
+
 function Invoke-InterfaceOperation {
     param([object]$Request)
     if ($Request.Action -notin @('Close','Refresh')) { throw 'Unknown operation.' }
@@ -51,13 +67,20 @@ function Invoke-InterfaceOperation {
     $backup = Write-DiscordRulePlan $snapshot $plan $roots $inventory
     foreach ($path in $plan.Added) { Write-Host ('ADD ' + $path) }
     foreach ($path in $plan.Removed) { Write-Host ('REMOVE ' + $path) }
-    $message = 'Rules refreshed. Open Proton VPN and reconnect before reopening Discord.'
-    if ($plan.EnabledSplitTunneling) { $message = 'Saved Split tunneling ON in Include mode and refreshed Discord rules. Open Proton VPN and reconnect to apply the settings.' }
-    if (-not $plan.Changed) { $message = 'The rules are already current. Open Proton VPN and reconnect before reopening Discord.' }
+    $message = 'Rules refreshed.'
+    if ($plan.EnabledSplitTunneling) { $message = 'Saved Split tunneling ON in Include mode and refreshed Discord rules.' }
+    if (-not $plan.Changed) { $message = 'The rules are already current.' }
+    $launchStatus = 'Failed'; $launchWarning = $null
+    try { $launchStatus = Start-ProtonAfterRefresh }
+    catch { $launchWarning = 'Proton VPN could not be launched automatically: ' + $_.Exception.Message }
+    if ($launchStatus -eq 'Started') { $message += ' Proton VPN launch requested. Wait until it is connected before reopening Discord.' }
+    elseif ($launchStatus -eq 'AlreadyRunning') { $message += ' Proton VPN is already running. Reconnect it to apply the rules before reopening Discord.' }
+    else { $message += ' Open Proton VPN manually and reconnect; automatic launch failed.' }
     return [pscustomobject]@{
         Success = $true; Action = 'Refresh'; Message = $message
         Total = $plan.DesiredPaths.Count; Added = @($plan.Added); Removed = @($plan.Removed); BackupPath = $backup
         EnabledSplitTunneling = $plan.EnabledSplitTunneling
+        ProtonLaunchStatus = $launchStatus; ProtonLaunchWarning = $launchWarning
     }
 }
 
