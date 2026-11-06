@@ -16,7 +16,34 @@ function Install-DemocracyEnforcer {
     }
     $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
     if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) { throw 'Install .NET Framework 4.x with its C# compiler first.' }
-    $git = (Get-Command git.exe -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
+    $git = (Get-Command git.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+    $winget = (Get-Command winget.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+    if (-not $git) {
+        if (-not $winget) {
+            throw 'Git and WinGet were not found. Install Git for Windows from https://git-scm.com/install/windows, then rerun this script in a new PowerShell window.'
+        }
+        Write-Host 'Installing Git for Windows with WinGet...'
+        & $winget install --id Git.Git --exact --source winget --no-upgrade --accept-source-agreements --accept-package-agreements
+        if ($LASTEXITCODE -ne 0) {
+            throw "WinGet failed to install Git (exit code $LASTEXITCODE). Install Git for Windows manually, then rerun this script."
+        }
+
+        # The installer can update the saved PATH without updating this PowerShell session.
+        $savedPath = @(
+            [Environment]::GetEnvironmentVariable('Path', 'Machine')
+            [Environment]::GetEnvironmentVariable('Path', 'User')
+        )
+        $originalPath = $env:Path
+        try {
+            $env:Path = (@($originalPath) + $savedPath) -join ';'
+            $git = (Get-Command git.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+        } finally {
+            $env:Path = $originalPath
+        }
+        if (-not $git) {
+            throw 'WinGet completed, but Git was not found on PATH. Open a new PowerShell window and rerun this script.'
+        }
+    }
     $powershell = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
     if ([string]::IsNullOrWhiteSpace($SourceBranch) -or $SourceBranch.StartsWith('-')) { throw 'Invalid branch name.' }
     if ([string]::IsNullOrWhiteSpace($Destination)) {
