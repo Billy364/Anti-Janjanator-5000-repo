@@ -11,7 +11,7 @@ Version 9 and later recognize those omitted defaults.
 A missing enabled flag means off; a missing mode means Standard/Exclude. These
 defaults are defined in [Proton's official source](https://github.com/ProtonVPN/win-app/blob/d2a4f8bc92a0fd296943a7cdd15f4f870c8a87f9/src/Client/Settings/ProtonVPN.Client.Settings.Contracts/DefaultSettings.cs).
 
-1. Close the previous updater and extract the complete v13 ZIP into a new folder.
+1. Close the previous updater and extract the complete v14 ZIP into a new folder.
 2. Run the EXE. If setup is pending, exit Proton from its tray, select the intended
    account, then click **Apply setup and open updater** when it unlocks. Setup
    must finish; Exit/X closes the program, and errors must be resolved/retried.

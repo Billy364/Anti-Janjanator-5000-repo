@@ -1,4 +1,8 @@
-# Interface validation — November 6, 2026
+# Interface validation — November 7, 2026
+
+V14 restores the Anti-Janjanator 5000 name. The complete regression runner
+passed. The header and tray checks verified the restored name, and the main
+and setup windows were visually checked with fixture data.
 
 V13 adds a 10-second post-refresh delay before automatic Proton launch. Worker
 tests verify that saved activation/rules precede the wait, both changed and

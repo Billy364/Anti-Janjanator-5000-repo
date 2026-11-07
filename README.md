@@ -1,9 +1,9 @@
-# Democracy Enforcer 5000
+# Anti-Janjanator 5000
 
 A portable Windows app that refreshes Discord executable paths in Proton VPN's
 Split Tunneling **Included apps** after Discord updates.
 
-![Democracy Enforcer 5000 interface with example data](docs/screenshot.png)
+![Anti-Janjanator 5000 interface with example data](docs/screenshot.png)
 
 The app monitors Discord and the Proton VPN desktop client. Use **Close both
 apps**, then **Refresh split tunneling rules** once both have exited. Select
@@ -53,13 +53,15 @@ irm https://raw.githubusercontent.com/Billy364/Anti-Janjanator-5000-repo/main/in
 ```
 
 This downloads and executes the bootstrap script. It clones into
-`Downloads\Democracy-Enforcer-5000` (using Windows' configured Downloads folder), builds using Windows
-PowerShell 5.1 and .NET Framework, and creates **Democracy Enforcer 5000** on your Desktop (including a redirected/OneDrive Desktop). Open the
+`Downloads\Anti-Janjanator-5000` (using Windows' configured Downloads folder), builds using Windows
+PowerShell 5.1 and .NET Framework, and creates **Anti-Janjanator 5000** on your Desktop (including a redirected/OneDrive Desktop). Open the
 shortcut to launch the EXE when ready. The bootstrap does not launch the app,
 modify Proton settings, request administrator access, or change machine-wide
 execution policy. First launch of the app still performs the setup described above.
 
-Rerunning fast-forwards a clean installation checkout and rebuilds it; local
+Rerunning fast-forwards a clean installation checkout and rebuilds it. If the
+previously named Downloads checkout is the only one present, the installer
+updates it in place and creates the renamed Desktop shortcut. Local
 changes, a different origin/branch, or divergent history stop the update.
 Close a running copy before rebuilding. Git and the .NET compiler must already
 be installed; the bootstrap does not install prerequisites.
@@ -79,9 +81,9 @@ From Windows PowerShell in this repository:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-Open `dist\Democracy-Enforcer-5000\Democracy Enforcer 5000.exe`. Keep the generated
+Open `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`. Keep the generated
 folder together: the two PowerShell workers are needed at runtime. The build
-also creates `dist\Democracy-Enforcer-5000-v13.zip` for sharing. Builds are unsigned.
+also creates `dist\Anti-Janjanator-5000-v14.zip` for sharing. Builds are unsigned.
 
 ## Verify
 

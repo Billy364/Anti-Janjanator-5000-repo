@@ -1,5 +1,12 @@
 # Changelog
 
+## v14
+
+- Restored the Anti-Janjanator 5000 name in the executable, Windows metadata,
+  title bar, interface heading, setup window, and tray.
+- Updated the portable package, launcher, installer shortcut, and website
+  to use the restored name.
+
 ## v13
 
 - Wait 10 seconds after saving or confirming the rules before automatically

@@ -8,11 +8,11 @@ param(
 )
 
 # Works both as a file and when its contents are passed to Invoke-Expression.
-function Install-DemocracyEnforcer {
+function Install-AntiJanjanator {
     param([string]$SourceUrl, [string]$SourceBranch, [string]$Destination, [string]$DesktopDirectory)
     $ErrorActionPreference = 'Stop'
     if ($env:OS -ne 'Windows_NT' -or -not [Environment]::Is64BitOperatingSystem) {
-        throw 'Democracy Enforcer 5000 requires 64-bit Windows.'
+        throw 'Anti-Janjanator 5000 requires 64-bit Windows.'
     }
     $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
     if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) { throw 'Install .NET Framework 4.x with its C# compiler first.' }
@@ -50,7 +50,14 @@ function Install-DemocracyEnforcer {
         # Windows stores redirected/localized Downloads here under its known-folder ID.
         $downloadsFolder = (Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -ErrorAction Stop).'{374DE290-123F-4565-9164-39C4925E467B}'
         if ([string]::IsNullOrWhiteSpace($downloadsFolder)) { throw 'Windows Downloads folder could not be resolved. Specify -InstallDirectory.' }
-        $Destination = Join-Path ([Environment]::ExpandEnvironmentVariables($downloadsFolder)) 'Democracy-Enforcer-5000'
+        $downloadsPath = [Environment]::ExpandEnvironmentVariables($downloadsFolder)
+        $Destination = Join-Path $downloadsPath 'Anti-Janjanator-5000'
+        $previousDestination = Join-Path $downloadsPath 'Democracy-Enforcer-5000'
+        # Reuse a previous checkout so updates still go through the checks below.
+        if (-not (Test-Path -LiteralPath $Destination) -and
+            (Test-Path -LiteralPath (Join-Path $previousDestination '.git') -PathType Container)) {
+            $Destination = $previousDestination
+        }
     }
     $destinationPath = [IO.Path]::GetFullPath($Destination)
     $desktopPath = [IO.Path]::GetFullPath($DesktopDirectory)
@@ -77,10 +84,10 @@ function Install-DemocracyEnforcer {
     if (-not (Test-Path -LiteralPath $build -PathType Leaf)) { throw 'Repository build.ps1 is missing.' }
     & $powershell -NoProfile -ExecutionPolicy Bypass -File $build
     if ($LASTEXITCODE -ne 0) { throw 'Build failed. Close any running copy of this installation before retrying. No shortcut was created.' }
-    $appFolder = Join-Path $destinationPath 'dist\Democracy-Enforcer-5000'
-    $app = Join-Path $appFolder 'Democracy Enforcer 5000.exe'
-    if (-not (Test-Path -LiteralPath $app -PathType Leaf)) { throw 'Expected Democracy Enforcer build is missing. Use a branch containing the renamed app.' }
-    $shortcutPath = Join-Path $desktopPath 'Democracy Enforcer 5000.lnk'
+    $appFolder = Join-Path $destinationPath 'dist\Anti-Janjanator-5000'
+    $app = Join-Path $appFolder 'Anti-Janjanator 5000.exe'
+    if (-not (Test-Path -LiteralPath $app -PathType Leaf)) { throw 'Expected Anti-Janjanator 5000 executable is missing.' }
+    $shortcutPath = Join-Path $desktopPath 'Anti-Janjanator 5000.lnk'
     $shell = New-Object -ComObject WScript.Shell
     try {
         $shortcut = $shell.CreateShortcut($shortcutPath)
@@ -88,13 +95,13 @@ function Install-DemocracyEnforcer {
             $shortcut.TargetPath = $app
             $shortcut.WorkingDirectory = $appFolder
             $shortcut.IconLocation = $app + ',0'
-            $shortcut.Description = 'Launch Democracy Enforcer 5000'
+            $shortcut.Description = 'Launch Anti-Janjanator 5000'
             $shortcut.Save()
         } finally { if ($null -ne $shortcut) { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($shortcut) } }
     } finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($shell) }
     Write-Output "Built app: $app"
     Write-Output "Desktop shortcut: $shortcutPath"
-    Write-Output 'Open the Desktop shortcut to launch Democracy Enforcer 5000 when ready. Installation does not launch the app or change Proton settings.'
+    Write-Output 'Open the Desktop shortcut to launch Anti-Janjanator 5000 when ready. Installation does not launch the app or change Proton settings.'
 }
 
-Install-DemocracyEnforcer -SourceUrl $RepositoryUrl -SourceBranch $Branch -Destination $InstallDirectory -DesktopDirectory $ShortcutDirectory
+Install-AntiJanjanator -SourceUrl $RepositoryUrl -SourceBranch $Branch -Destination $InstallDirectory -DesktopDirectory $ShortcutDirectory

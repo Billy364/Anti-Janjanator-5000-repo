@@ -10,17 +10,17 @@ using System.Runtime.InteropServices;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
-[assembly: System.Reflection.AssemblyTitle("Democracy Enforcer 5000")]
-[assembly: System.Reflection.AssemblyProduct("Democracy Enforcer 5000")]
+[assembly: System.Reflection.AssemblyTitle("Anti-Janjanator 5000")]
+[assembly: System.Reflection.AssemblyProduct("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyDescription("Discord rules updater for Proton VPN split tunneling")]
-[assembly: System.Reflection.AssemblyVersion("13.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("13.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("14.0.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("14.0.0.0")]
 
 namespace DiscordProtonUpdater
 {
     public static class AppIdentity
     {
-        public const string Name = "Democracy Enforcer 5000";
+        public const string Name = "Anti-Janjanator 5000";
     }
 
     public sealed class AccountInfo
