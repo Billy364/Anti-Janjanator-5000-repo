@@ -1,4 +1,13 @@
-# Interface validation — October 31, 2026
+# Interface validation — November 6, 2026
+
+V13 adds a 10-second post-refresh delay before automatic Proton launch. Worker
+tests verify that saved activation/rules precede the wait, both changed and
+already-current refreshes wait once, and Close/rejected operations do not wait.
+A simulated client opening during the delay prevents another launch. One timed
+case uses the real PowerShell sleep with a mocked launch and verifies at least
+10 seconds elapsed. The complete runner passed with synthetic settings and
+processes; these checks do not establish live VPN routing or whether a delay
+resolves a specific Proton installation's behavior.
 
 V12 restores the exact initial PNG and ICO assets from commit 45b259f. The
 compiler embeds the same ICO as the native executable icon and runtime icon;

@@ -9,6 +9,7 @@ $script:injectOnRead = $false
 $script:launches = @(); $script:failLaunch = $false; $script:failResolve = $false; $script:launchAccount = $null
 $script:originalLaunchResolver = ${function:Get-ProtonLaunchPath}
 $script:originalReader = ${function:Read-ProtonSettings}
+$script:launchWaits = 0; $script:waitPending = $false; $script:restartDuringWait = $false; $script:realWait = $false
 $session = [Diagnostics.Process]::GetCurrentProcess().SessionId
 function global:Get-Process {
     [CmdletBinding()]param([string[]]$Name)
@@ -20,9 +21,21 @@ function global:Stop-Process {
     $script:fakeProcesses = @($script:fakeProcesses | Where-Object { $_.Id -ne $InputObject.Id })
 }
 function Get-ProtonLaunchPath { if($script:failResolve) { throw 'Synthetic Proton installation lookup failed.' }; return $protonPath }
+function global:Start-Sleep {
+    param([int]$Seconds)
+    if($Seconds -ne 10) { throw 'Expected a 10-second post-refresh launch delay.' }
+    if($script:launchAccount) {
+        $saved=[IO.File]::ReadAllText($script:launchAccount)|ConvertFrom-Json
+        if($saved.IsSplitTunnelingEnabled -cne 'true' -or $saved.SplitTunnelingMode -cne 'Inverse' -or @($saved.SplitTunnelingInverseAppsList|ConvertFrom-Json).Count -eq 0) { throw 'Launch delay began before activation/rules were saved.' }
+    }
+    $script:launchWaits++; $script:waitPending=$true
+    if($script:restartDuringWait) { $script:fakeProcesses=@((New-FakeProcess 89 $protonPath)) }
+    if($script:realWait) { Microsoft.PowerShell.Utility\Start-Sleep -Seconds $Seconds }
+}
 function global:Start-Process {
     [CmdletBinding()]param([string]$FilePath,[string]$WorkingDirectory,[string]$WindowStyle)
     if($FilePath -cne $protonPath -or $WorkingDirectory -cne [IO.Path]::GetDirectoryName($protonPath) -or $WindowStyle -ne 'Normal') { throw 'Unexpected app launch or inherited working directory.' }
+    if(-not $script:waitPending) { throw 'Proton launch skipped its delay.' }; $script:waitPending=$false
     if($script:launchAccount) {
         $saved=[IO.File]::ReadAllText($script:launchAccount)|ConvertFrom-Json
         if($saved.IsSplitTunnelingEnabled -cne 'true' -or $saved.SplitTunnelingMode -cne 'Inverse' -or @($saved.SplitTunnelingInverseAppsList|ConvertFrom-Json).Count -eq 0) { throw 'Proton was launched before the rules and activation were saved.' }
@@ -39,7 +52,7 @@ function Read-ProtonSettings {
     return $snapshot
 }
 function Assert-True { param([bool]$Condition,[string]$Message) if (-not $Condition) { throw $Message } }
-function Assert-Rejected { param([scriptblock]$Action,[string]$Text) $launchCount=$script:launches.Count; $errorText=''; try { & $Action } catch { $errorText=$_.Exception.Message }; Assert-True ($errorText -like ('*'+$Text+'*')) ('Expected rejection: '+$Text+'; got '+$errorText); Assert-True ($script:launches.Count -eq $launchCount) 'Rejected operation launched an app.' }
+function Assert-Rejected { param([scriptblock]$Action,[string]$Text) $launchCount=$script:launches.Count; $waitCount=$script:launchWaits; $errorText=''; try { & $Action } catch { $errorText=$_.Exception.Message }; Assert-True ($errorText -like ('*'+$Text+'*')) ('Expected rejection: '+$Text+'; got '+$errorText); Assert-True ($script:launches.Count -eq $launchCount -and $script:launchWaits -eq $waitCount) 'Rejected operation waited for or launched an app.' }
 function New-FakeProcess {
     param([int]$Id,[string]$Path)
     $process = [pscustomobject]@{ Id=$Id; Path=$Path; ProcessName=[IO.Path]::GetFileNameWithoutExtension($Path); SessionId=$session }
@@ -75,9 +88,11 @@ Assert-Rejected { Invoke-InterfaceOperation $request } 'running'
 Assert-True ((Get-FileHash -LiteralPath $file).Hash -eq $originalHash) 'Late relaunch was not blocked.'
 Write-Output 'PASS: An app relaunching after the settings read blocks the write.'
 $script:fakeProcesses=@()
+$script:launchAccount=$file
 $result=Invoke-InterfaceOperation $request
 Assert-True ($result.Success -and $result.Total -eq 2 -and $result.Added.Count -eq 2 -and $result.Removed.Count -eq 1) 'Unexpected refresh result.'
 Assert-True ($result.ProtonLaunchStatus -eq 'Started' -and $script:launches.Count -eq 1) 'Successful refresh did not request one Proton launch.'
+Assert-True ($script:launchWaits -eq 1) 'Successful refresh did not wait once after saving.'
 Assert-True ((Get-FileHash -LiteralPath $result.BackupPath).Hash -eq $originalHash) 'Backup differs from original.'
 $after = & $script:originalReader $file
 Assert-True (@($after.Apps | Where-Object { $_.AppFilePath -eq 'C:\Other\Browser.exe' -and -not $_.IsActive }).Count -eq 1) 'Other app changed.'
@@ -88,14 +103,17 @@ $launchCount=$script:launches.Count
 $repeat=Invoke-InterfaceOperation $request
 Assert-True ($repeat.Success -and $null -eq $repeat.BackupPath -and (Get-FileHash -LiteralPath $file).Hash -eq $hash) 'Repeat refresh was not a no-op.'
 Assert-True ($repeat.ProtonLaunchStatus -eq 'Started' -and $script:launches.Count -eq ($launchCount+1)) 'Already-current rules did not launch Proton.'
+Assert-True ($script:launchWaits -eq 2) 'No-op refresh skipped the launch delay.'
+$script:launchAccount=$null
 Write-Output 'PASS: Successful and already-current refreshes request Proton once; no-op rules still cause no settings write/backup.'
 $script:fakeProcesses=@((New-FakeProcess 10 $main),(New-FakeProcess 11 $helper),(New-FakeProcess 12 $protonPath))
 $readsBefore=$script:readCount
 $launchCount=$script:launches.Count
+$waitCount=$script:launchWaits
 $closed=Invoke-InterfaceOperation ([pscustomobject]@{Action='Close';SettingsPath=$null;Roots=@($root)})
 Assert-True ($closed.Success -and $script:fakeProcesses.Count -eq 0 -and $script:stopped.Count -eq 3) 'Close did not exit all expected app processes.'
 Assert-True ($script:readCount -eq $readsBefore -and (Get-FileHash -LiteralPath $file).Hash -eq $hash) 'Close depended on account selection or changed settings.'
-Assert-True ($script:launches.Count -eq $launchCount) 'Close reopened Proton.'
+Assert-True ($script:launches.Count -eq $launchCount -and $script:launchWaits -eq $waitCount) 'Close waited for or reopened Proton.'
 Write-Output 'PASS: Close exits both apps and helpers without an account selection, and does not refresh settings.'
 $other=New-FakeProcess 20 $protonPath;$other.SessionId=$session+1;$script:fakeProcesses=@($other)
 $differentSession=Invoke-InterfaceOperation $request
@@ -228,6 +246,16 @@ $alreadyRunning=Start-ProtonAfterRefresh
 Assert-True ($alreadyRunning -eq 'AlreadyRunning' -and $script:launches.Count -eq $launchCount) 'An existing Proton client was launched twice.'
 $script:fakeProcesses=@();$script:launchAccount=$null
 Write-Output 'PASS: A client that has already restarted is not launched again.'
+
+$script:restartDuringWait=$true; $launchCount=$script:launches.Count
+$restartedDuringWait=Start-ProtonAfterRefresh
+Assert-True ($restartedDuringWait -eq 'AlreadyRunning' -and $script:launches.Count -eq $launchCount) 'A client opening during the delay was launched twice.'
+$script:restartDuringWait=$false; $script:fakeProcesses=@(); $script:realWait=$true
+$timer=[Diagnostics.Stopwatch]::StartNew()
+$delayedLaunch=Start-ProtonAfterRefresh
+$timer.Stop(); $script:realWait=$false
+Assert-True ($delayedLaunch -eq 'Started' -and $timer.Elapsed.TotalSeconds -ge 10) 'Automatic launch did not wait at least 10 seconds.'
+Write-Output 'PASS: Saved and already-current rules wait 10 seconds; a restart during the delay prevents duplicate launch; a real timed delay lasts at least 10 seconds.'
 
 $installRoot=Join-Path $RunFolder 'Proton install'
 foreach($version in @('v5.1.8','v5.1.9')) {

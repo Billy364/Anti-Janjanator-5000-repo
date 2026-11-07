@@ -57,13 +57,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 
 The script compiles the C# interface for x64, embeds the header artwork and ICO,
 copies the required workers and documentation, and creates a portable ZIP.
-For the current v12 source, outputs are:
+For the current v13 source, outputs are:
 
 - `dist\Democracy-Enforcer-5000\Democracy Enforcer 5000.exe`
 - `dist\Democracy-Enforcer-5000\Open Democracy Enforcer 5000.cmd`
 - `dist\Democracy-Enforcer-5000\UpdaterWorker.ps1`
 - `dist\Democracy-Enforcer-5000\Update-DiscordRules.ps1`
-- `dist\Democracy-Enforcer-5000-v12.zip`
+- `dist\Democracy-Enforcer-5000-v13.zip`
 
 Distribute the generated ZIP or the entire app folder, not just the EXE: the
 PowerShell workers must stay beside it. The build is unsigned. The
@@ -139,8 +139,10 @@ release versions, keep the assembly version, `VERSION.txt`, ZIP name,
   opted in. Reject stale process inspections from before Close and ignore
   processes that exit during image lookup.
 - Leave the Proton background service running. After successful GUI Refresh
-  (including an already-current result), request a Proton launch, preferring its
-  stable launcher and otherwise the newest versioned client. Use the Proton
+  (including an already-current result), wait at least 10 seconds after the
+  settings transaction, then recheck for an existing client and request a Proton
+  launch, preferring its stable launcher and otherwise the newest versioned
+  client. Use the Proton
   executable's directory as its working directory. Close and failed refreshes
   must not reopen apps; Discord stays closed. Avoid duplicate Proton launches.
   Report launch failure separately from saved-settings success. Respect Proton's

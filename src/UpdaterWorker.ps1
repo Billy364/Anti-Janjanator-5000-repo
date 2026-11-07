@@ -22,6 +22,10 @@ function Get-ProtonLaunchPath {
 }
 
 function Start-ProtonAfterRefresh {
+    # The caller has finished the settings transaction before entering this wait.
+    Write-Host 'Rules are saved/current. Waiting 10 seconds before launching Proton VPN...'
+    Start-Sleep -Seconds 10
+    # Proton may have been opened manually during the delay.
     if (@(Get-ProtonAppProcesses).Count -gt 0) { return 'AlreadyRunning' }
     $client = Get-ProtonLaunchPath
     # The launcher must not inherit the portable updater folder as its current

@@ -11,15 +11,16 @@ Version 9 and later recognize those omitted defaults.
 A missing enabled flag means off; a missing mode means Standard/Exclude. These
 defaults are defined in [Proton's official source](https://github.com/ProtonVPN/win-app/blob/d2a4f8bc92a0fd296943a7cdd15f4f870c8a87f9/src/Client/Settings/ProtonVPN.Client.Settings.Contracts/DefaultSettings.cs).
 
-1. Close the previous updater and extract the complete v11 ZIP into a new folder.
+1. Close the previous updater and extract the complete v13 ZIP into a new folder.
 2. Run the EXE. If setup is pending, exit Proton from its tray, select the intended
    account, then click **Apply setup and open updater** when it unlocks. Setup
    must finish; Exit/X closes the program, and errors must be resolved/retried.
 3. In the main interface, select the intended account and use **Close both apps**.
 4. Once both cards show Exited, click **Refresh**. Version 10 automatically turns
    Split tunneling on in Include mode and updates Discord's rules together.
-5. Proton opens automatically after Refresh. Wait for it to connect before
-   opening Discord again. A launch warning means it must be opened manually.
+5. Proton opens automatically after a 10-second post-refresh wait. Wait for it
+   to connect before opening Discord again. A launch warning means it must be
+   opened manually.
 
 Refresh can create an absent/null Included-app list, enable Split tunneling,
 and switch Exclude mode to Include mode. It commits these together with the
@@ -53,8 +54,11 @@ connection. Another Refresh stays disabled while Proton is open.
 ## Refresh succeeded but Proton did not open
 
 The worker launches Proton only after the settings write succeeds, or after
-confirming the rules are already current. A launch/installation lookup failure
-does not undo the refreshed rules or their backup. Read the separate warning in
+confirming the rules are already current. Version 13 waits 10 seconds after
+saving/confirming the rules, with the updater buttons locked, before checking
+for an existing Proton client and requesting a launch. Keep the updater open
+until it finishes. A launch/installation lookup failure does not undo the
+refreshed rules or their backup. Read the separate warning in
 Activity and open Proton manually. Standard installation discovery prefers
 `%ProgramFiles%\Proton\VPN\ProtonVPN.Launcher.exe`, then falls back to the newest
 versioned `ProtonVPN.Client.exe`. Close and failed refreshes do not launch it.

@@ -1,5 +1,13 @@
 # Changelog
 
+## v13
+
+- Wait 10 seconds after saving or confirming the rules before automatically
+  opening Proton VPN. Keep the interface locked and report the wait in Activity.
+- Recheck for a Proton client after the delay to avoid duplicate launches if
+  the user opens it during the wait. Close and failed refreshes do not wait.
+- Added delay ordering, no-op, restart-during-wait, and real elapsed-time checks.
+
 ## v12
 
 - Restored the original header artwork and multi-size executable, window,

@@ -15,8 +15,8 @@ the intended account if more than one Proton account is saved on the PC.
 - Automatically enables Split tunneling in Include mode when you click Refresh.
 - Preserves unrelated Included apps and preferences, with an exact backup for
   every actual change.
-- Opens Proton immediately after successful Refresh; wait for its connection
-  before opening Discord, which stays closed.
+- Waits 10 seconds after successful Refresh before opening Proton; wait for its
+  connection before opening Discord, which stays closed.
 - Includes the supplied artwork as the header, application icon, and tray icon.
 
 Proton's background VPN service stays running. This unofficial utility was
@@ -81,7 +81,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 Open `dist\Democracy-Enforcer-5000\Democracy Enforcer 5000.exe`. Keep the generated
 folder together: the two PowerShell workers are needed at runtime. The build
-also creates `dist\Democracy-Enforcer-5000-v12.zip` for sharing. Builds are unsigned.
+also creates `dist\Democracy-Enforcer-5000-v13.zip` for sharing. Builds are unsigned.
 
 ## Verify
 
@@ -101,7 +101,8 @@ one saved update with an exact backup. There is no manual Proton mode setup. See
 [troubleshooting](docs/TROUBLESHOOTING.md) for the former unsupported-format error
 and uncertain process status.
 
-Successful Refresh launches Proton even when its rules are already current.
+Successful Refresh waits 10 seconds before launching Proton, even when its rules
+are already current.
 If Proton already restarted, another copy is not launched. If launching fails,
 the saved rules and backup remain valid; the activity log explains that Proton
 must be opened manually. Launching the app does not prove the VPN is connected.

@@ -37,7 +37,9 @@ and restoration instructions are in FIRST-LAUNCH.md.
 4. Once both apps are verified as exited, **2. Refresh split tunneling rules**
    becomes available. Click it to enable Include mode if needed and update the
    selected account's Included apps in one backed-up settings change.
-5. Proton VPN opens automatically after Refresh. Wait for it to connect (or
+5. After saving or confirming the rules, the updater waits 10 seconds before
+   opening Proton VPN automatically. Keep the updater open; its buttons remain
+   locked during the wait. Wait for Proton to connect (or
    connect manually if auto-connect is disabled), then reopen Discord.
 
 Newly signed-in accounts may omit default settings. This is supported: the app

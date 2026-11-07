@@ -13,8 +13,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("Democracy Enforcer 5000")]
 [assembly: System.Reflection.AssemblyProduct("Democracy Enforcer 5000")]
 [assembly: System.Reflection.AssemblyDescription("Discord rules updater for Proton VPN split tunneling")]
-[assembly: System.Reflection.AssemblyVersion("12.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("12.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("13.0.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("13.0.0.0")]
 
 namespace DiscordProtonUpdater
 {
@@ -555,7 +555,7 @@ namespace DiscordProtonUpdater
             if (action == "Close" && !UiPolicy.CanClose(last, false)) return;
             OperationRequest request = new OperationRequest { Action = action, SettingsPath = SelectedAccount == null ? null : SelectedAccount.Path, Roots = new List<string>(last.Roots) };
             busy = true; successText = null; refreshSucceeded = false; clearPolls = 0; inspectionGeneration++;
-            AppendLog(action == "Close" ? "Closing Discord and the Proton VPN desktop client..." : "Rechecking app exit, enabling Include mode if needed, and refreshing the selected account's rules...");
+            AppendLog(action == "Close" ? "Closing Discord and the Proton VPN desktop client..." : "Rechecking app exit, enabling Include mode if needed, and refreshing the selected account's rules. Proton will launch after a 10-second wait...");
             RenderState(); operation.RunWorkerAsync(request);
         }
         private void AppendLog(string text)
