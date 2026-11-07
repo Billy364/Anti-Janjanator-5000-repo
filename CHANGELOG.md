@@ -2,6 +2,7 @@
 
 ## v13
 
+- Rename the app to Anti-Janjanator 5000 across the interface, installer, portable package, and website.
 - Wait 10 seconds after saving or confirming the rules before automatically
   opening Proton VPN. Keep the interface locked and report the wait in Activity.
 - Recheck for a Proton client after the delay to avoid duplicate launches if
