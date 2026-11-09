@@ -19,8 +19,8 @@ Proton Protocols with Proton WireGuard, and Split tunneling in Include mode wher
 supported. Exit Proton from its tray icon and choose an account if needed, then
 click **Apply setup and open updater**. The button is disabled until Proton's
 exit is verified. Successful setup opens the usual interface. It does not close
-Discord or reconnect the VPN. Use the usual close/refresh workflow afterward;
-Refresh launches Proton so it loads the settings and registers Windows startup.
+Discord or reconnect the VPN. Use the close and refresh buttons, then click
+**Launch Proton VPN** so it loads the settings and registers Windows startup.
 
 The completed setup is remembered per Windows user across portable-folder moves
 and app updates. Later launches skip completed setup. There is no skip option:
@@ -37,10 +37,13 @@ and restoration instructions are in FIRST-LAUNCH.md.
 4. Once both apps are verified as exited, **2. Refresh split tunneling rules**
    becomes available. Click it to enable Include mode if needed and update the
    selected account's Included apps in one backed-up settings change.
-5. After saving or confirming the rules, the updater waits 10 seconds before
-   opening Proton VPN automatically. Keep the updater open; its buttons remain
-   locked during the wait. Wait for Proton to connect (or
-   connect manually if auto-connect is disabled), then reopen Discord.
+5. The status reads **Please wait, rules are being applied...** during the
+   10-second countdown on **3. Launch Proton VPN**. Click it when it unlocks.
+6. The status reads **Please wait, launching ProtonVPN...** during the second
+   10-second countdown on **4. Launch Discord**. Confirm Proton is connected,
+   then click the button.
+7. After the Discord launch step succeeds, **Process completed** and **5. Exit**
+   appear. Click Exit to close the updater.
 
 Newly signed-in accounts may omit default settings. This is supported: the app
 recognizes off/Exclude mode rather than treating omitted keys as an unknown
@@ -57,18 +60,19 @@ an app restarting after a button lights up still blocks the write.
 Closing Discord ends active calls. The close action requests a normal exit and
 then ends remaining verified app processes if necessary. A busy Discord updater
 is allowed up to 30 seconds to finish; it is not forcibly terminated. The close
-action does not refresh settings or reopen an app. A successful Refresh launches
-Proton, including when the rules are already current, and leaves Discord closed.
+action only closes apps. A successful Refresh, including when the rules are
+already current, starts the first countdown.
 
 Proton's status refers to its desktop client. Its background VPN service is left
 running; this tool does not verify the connection's routing or automatically
 connect/disconnect the VPN directly. Proton follows its own auto-connect setting
 when launched. Verify it is connected before reopening Discord.
 
-If Proton cannot be launched, the successful settings update and exact backup
-are retained. The activity log reports a separate warning: open Proton manually
-and connect. If it has already restarted, the updater does not start another copy.
-The executable runs from its own directory so it does not lock the updater folder.
+If a launch fails, read the error in Activity and retry that button. If you
+opened the app manually, the button recognizes the running app. Discord launch
+prefers Discord, then PTB, then Canary among the refreshed installations, and
+uses the newest versioned executable for the chosen channel. If the target
+changes after Refresh, close the apps and refresh again.
 
 ## Discovery and settings
 

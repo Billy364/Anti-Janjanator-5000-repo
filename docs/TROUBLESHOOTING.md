@@ -11,16 +11,15 @@ Version 9 and later recognize those omitted defaults.
 A missing enabled flag means off; a missing mode means Standard/Exclude. These
 defaults are defined in [Proton's official source](https://github.com/ProtonVPN/win-app/blob/d2a4f8bc92a0fd296943a7cdd15f4f870c8a87f9/src/Client/Settings/ProtonVPN.Client.Settings.Contracts/DefaultSettings.cs).
 
-1. Close the previous updater and extract the complete v14 ZIP into a new folder.
+1. Close the previous updater and extract the complete v15 ZIP into a new folder.
 2. Run the EXE. If setup is pending, exit Proton from its tray, select the intended
    account, then click **Apply setup and open updater** when it unlocks. Setup
    must finish; Exit/X closes the program, and errors must be resolved/retried.
 3. In the main interface, select the intended account and use **Close both apps**.
 4. Once both cards show Exited, click **Refresh**. Version 10 automatically turns
    Split tunneling on in Include mode and updates Discord's rules together.
-5. Proton opens automatically after a 10-second post-refresh wait. Wait for it
-   to connect before opening Discord again. A launch warning means it must be
-   opened manually.
+5. Click **Launch Proton VPN** once its countdown ends. When Proton is
+   connected and the second countdown has ended, click **Launch Discord**.
 
 Refresh can create an absent/null Included-app list, enable Split tunneling,
 and switch Exclude mode to Include mode. It commits these together with the
@@ -47,21 +46,17 @@ actual live process cannot be verified, Refresh remains locked and the warning
 names the process. Run the updater as the same Windows user/privilege level as
 the apps, or close the inaccessible process manually.
 
-After a successful Refresh, Proton running again is expected in v11: the updater
-launched it to load the new rules. The status message asks you to wait for its
-connection. Another Refresh stays disabled while Proton is open.
+After **Launch Proton VPN**, another Refresh stays disabled while Proton is
+open. Check its connection before clicking **Launch Discord**.
 
 ## Refresh succeeded but Proton did not open
 
-The worker launches Proton only after the settings write succeeds, or after
-confirming the rules are already current. Version 13 waits 10 seconds after
-saving/confirming the rules, with the updater buttons locked, before checking
-for an existing Proton client and requesting a launch. Keep the updater open
-until it finishes. A launch/installation lookup failure does not undo the
-refreshed rules or their backup. Read the separate warning in
-Activity and open Proton manually. Standard installation discovery prefers
+After a successful Refresh, wait 10 seconds for **Launch Proton VPN** to
+unlock, then click it. If the launch fails, check Activity and retry the
+button. You can also open Proton manually and click the button to proceed.
+Standard installation discovery prefers
 `%ProgramFiles%\Proton\VPN\ProtonVPN.Launcher.exe`, then falls back to the newest
-versioned `ProtonVPN.Client.exe`. Close and failed refreshes do not launch it.
+versioned `ProtonVPN.Client.exe`.
 
 The app does not force a connection or switch Proton accounts. Proton follows
 its saved auto-connect preference; confirm the intended account and connection.

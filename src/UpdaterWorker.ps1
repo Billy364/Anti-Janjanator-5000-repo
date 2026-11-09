@@ -21,25 +21,63 @@ function Get-ProtonLaunchPath {
     return Get-ProtonClientPath -BaseFolder $InstallRoot
 }
 
-function Start-ProtonAfterRefresh {
-    # The caller has finished the settings transaction before entering this wait.
-    Write-Host 'Rules are saved/current. Waiting 10 seconds before launching Proton VPN...'
-    Start-Sleep -Seconds 10
-    # Proton may have been opened manually during the delay.
-    if (@(Get-ProtonAppProcesses).Count -gt 0) { return 'AlreadyRunning' }
-    $client = Get-ProtonLaunchPath
-    # The launcher must not inherit the portable updater folder as its current
-    # directory, otherwise Windows may prevent deleting that folder afterward.
-    Start-Process -FilePath $client -WorkingDirectory ([IO.Path]::GetDirectoryName($client)) -WindowStyle Normal -ErrorAction Stop
-    return 'Started'
+function Get-DiscordLaunchPath {
+    param([object[]]$Inventory)
+    foreach ($name in @('Discord.exe', 'DiscordPTB.exe', 'DiscordCanary.exe')) {
+        $candidates = @($Inventory | Where-Object { [IO.Path]::GetFileName($_.Path) -ieq $name })
+        if ($candidates.Count -eq 0) { continue }
+        $ordered = $candidates | Sort-Object -Property @{ Expression = {
+            $folder = [IO.Path]::GetFileName([IO.Path]::GetDirectoryName($_.Path))
+            $version = [version]'0.0'
+            if ($folder -match '^app-(.+)$') {
+                $parsed = $null
+                if ([version]::TryParse($Matches[1], [ref]$parsed)) { $version = $parsed }
+            }
+            $version
+        }; Descending = $true }, Path
+        return @($ordered)[0].Path
+    }
+    throw 'No Discord application executable was found.'
+}
+
+function Start-DesktopClient {
+    param([string]$Path)
+    # Use the app's directory so it does not keep the updater folder locked.
+    Start-Process -FilePath $Path -WorkingDirectory ([IO.Path]::GetDirectoryName($Path)) -WindowStyle Normal -ErrorAction Stop
 }
 
 function Invoke-InterfaceOperation {
     param([object]$Request)
-    if ($Request.Action -notin @('Close','Refresh')) { throw 'Unknown operation.' }
+    if ($Request.Action -notin @('Close','Refresh','LaunchProton','LaunchDiscord')) { throw 'Unknown operation.' }
+    if ($Request.Action -eq 'LaunchProton') {
+        $message = 'Proton VPN is already open. Check that it is connected before launching Discord.'
+        if (@(Get-ProtonAppProcesses).Count -eq 0) {
+            Start-DesktopClient (Get-ProtonLaunchPath)
+            $message = 'Proton VPN launch requested. Check that it is connected before launching Discord.'
+        }
+        return [pscustomobject]@{ Success = $true; Action = 'LaunchProton'; Message = $message }
+    }
     $requestedRoots = @($Request.Roots | ForEach-Object { [string]$_ })
     $roots = @()
     if ($requestedRoots.Count -gt 0) { $roots = @(Resolve-DiscordRoots $requestedRoots) }
+    if ($Request.Action -eq 'LaunchDiscord') {
+        if (@(Get-ProtonAppProcesses).Count -eq 0) {
+            throw 'Open Proton VPN and connect before retrying Launch Discord.'
+        }
+        if ($roots.Count -eq 0) { throw 'No refreshed Discord installation was found.' }
+        $inventory = @(Get-DiscordInventory $roots)
+        $client = Get-DiscordLaunchPath $inventory
+        if ($client -ine [string]$Request.DiscordPath) {
+            throw 'The Discord executable changed after Refresh. Close both apps and refresh the rules again.'
+        }
+        $mainFiles = @($inventory | Where-Object { [IO.Path]::GetFileName($_.Path) -match '^Discord(PTB|Canary)?\.exe$' })
+        $message = 'Discord is already open.'
+        if (@(Get-DiscordAppProcesses $roots $mainFiles).Count -eq 0) {
+            Start-DesktopClient $client
+            $message = 'Discord launch requested.'
+        }
+        return [pscustomobject]@{ Success = $true; Action = 'LaunchDiscord'; Message = $message }
+    }
     if ($Request.Action -eq 'Close') {
         $session = [Diagnostics.Process]::GetCurrentProcess().SessionId
         foreach ($process in @(Get-Process -Name 'Discord','DiscordPTB','DiscordCanary' -ErrorAction SilentlyContinue)) {
@@ -65,6 +103,7 @@ function Invoke-InterfaceOperation {
     if ($roots.Count -eq 0) { throw 'No Discord installation is selected or detected.' }
     if ([string]::IsNullOrWhiteSpace([string]$Request.SettingsPath)) { throw 'Select a Proton account settings file.' }
     $inventory = @(Get-DiscordInventory $roots)
+    $discordPath = Get-DiscordLaunchPath $inventory
     $snapshot = Read-ProtonSettings -Path ([string]$Request.SettingsPath) -EnableSplitTunneling
     $plan = New-DiscordRulePlan $snapshot $roots $inventory
     Assert-DesktopAppsExited $roots
@@ -74,17 +113,11 @@ function Invoke-InterfaceOperation {
     $message = 'Rules refreshed.'
     if ($plan.EnabledSplitTunneling) { $message = 'Saved Split tunneling ON in Include mode and refreshed Discord rules.' }
     if (-not $plan.Changed) { $message = 'The rules are already current.' }
-    $launchStatus = 'Failed'; $launchWarning = $null
-    try { $launchStatus = Start-ProtonAfterRefresh }
-    catch { $launchWarning = 'Proton VPN could not be launched automatically: ' + $_.Exception.Message }
-    if ($launchStatus -eq 'Started') { $message += ' Proton VPN launch requested. Wait until it is connected before reopening Discord.' }
-    elseif ($launchStatus -eq 'AlreadyRunning') { $message += ' Proton VPN is already running. Reconnect it to apply the rules before reopening Discord.' }
-    else { $message += ' Open Proton VPN manually and reconnect; automatic launch failed.' }
     return [pscustomobject]@{
         Success = $true; Action = 'Refresh'; Message = $message
         Total = $plan.DesiredPaths.Count; Added = @($plan.Added); Removed = @($plan.Removed); BackupPath = $backup
         EnabledSplitTunneling = $plan.EnabledSplitTunneling
-        ProtonLaunchStatus = $launchStatus; ProtonLaunchWarning = $launchWarning
+        DiscordPath = $discordPath
     }
 }
 

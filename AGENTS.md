@@ -57,13 +57,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 
 The script compiles the C# interface for x64, embeds the header artwork and ICO,
 copies the required workers and documentation, and creates a portable ZIP.
-For the current v14 source, outputs are:
+For the current v15 source, outputs are:
 
 - `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`
 - `dist\Anti-Janjanator-5000\Open Anti-Janjanator 5000.cmd`
 - `dist\Anti-Janjanator-5000\UpdaterWorker.ps1`
 - `dist\Anti-Janjanator-5000\Update-DiscordRules.ps1`
-- `dist\Anti-Janjanator-5000-v14.zip`
+- `dist\Anti-Janjanator-5000-v15.zip`
 
 Distribute the generated ZIP or the entire app folder, not just the EXE: the
 PowerShell workers must stay beside it. The build is unsigned. The
@@ -109,7 +109,7 @@ documented paths and commands; they do not require another full regression run.
 | --- | --- |
 | `src/UpdaterWindow.cs` | Windows Forms UI, app identity, process inspection, worker bridge |
 | `src/FirstLaunchSetup.cs` | First-launch preferences, transactional backups, marker, setup form |
-| `src/UpdaterWorker.ps1` | Separate Close and Refresh operations |
+| `src/UpdaterWorker.ps1` | Separate Close, Refresh, and launch operations |
 | `src/Update-DiscordRules.ps1` | Installation discovery, settings validation, rule planning, atomic writes |
 | `assets/HeaderArtwork.png`, `assets/AppIcon.ico` | Embedded artwork and icons |
 | `build.ps1` | Compiler arguments, portable folder contents, ZIP name |
@@ -138,15 +138,15 @@ release versions, keep the assembly version, `VERSION.txt`, ZIP name,
   with one exact backup. The legacy CLI reader remains strict unless explicitly
   opted in. Reject stale process inspections from before Close and ignore
   processes that exit during image lookup.
-- Leave the Proton background service running. After successful GUI Refresh
-  (including an already-current result), wait at least 10 seconds after the
-  settings transaction, then recheck for an existing client and request a Proton
-  launch, preferring its stable launcher and otherwise the newest versioned
-  client. Use the Proton
-  executable's directory as its working directory. Close and failed refreshes
-  must not reopen apps; Discord stays closed. Avoid duplicate Proton launches.
-  Report launch failure separately from saved-settings success. Respect Proton's
-  own auto-connect setting; do not claim these tests verify VPN traffic routing.
+- Leave the Proton background service running. Successful GUI Refresh, including
+  an already-current result, starts a 10-second countdown to unlock Launch
+  Proton VPN. A successful Proton launch action starts a separate 10-second
+  countdown to unlock Launch Discord. Both launches require a click. Keep
+  failed launches retryable, avoid duplicates, and use the app's own directory
+  as its working directory. Launch Discord from the refreshed target and reject
+  changes to that target. Show completion and Exit after the Discord action
+  succeeds. Respect Proton's auto-connect setting and ask the user to check its
+  connection before launching Discord.
 - First successful launch per Windows user may configure the selected account
   and global startup preference as described in `docs/FIRST-LAUNCH.md`. Preserve
   unrelated values and exclusions, require Proton's exit, back up changed files,

@@ -1,5 +1,14 @@
 # Changelog
 
+## v15
+
+- Added numbered Launch Proton VPN and Launch Discord buttons. Each unlocks
+  after its own 10-second countdown and waits for a click.
+- Show a status message during each countdown. Reveal Process completed and
+  Exit after the Discord launch step succeeds.
+- Keep launch retries separate from saved rules. Use the refreshed Discord
+  executable and ask for another refresh if that target changes.
+
 ## v14
 
 - Restored the Anti-Janjanator 5000 name in the executable, Windows metadata,

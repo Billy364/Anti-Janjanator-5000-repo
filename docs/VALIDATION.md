@@ -1,4 +1,10 @@
-# Interface validation — November 7, 2026
+# Interface validation — November 9, 2026
+
+V15 tests the five-step workflow with fixture processes. The form test waits for
+both 10-second countdowns, checks their status messages, and confirms that each
+launch needs a click. Completion and Exit appear after the Discord step. Worker
+fixtures cover launch retries, duplicate clients, and a Discord update changing
+the saved launch target. VPN connection and routing are checked by the user.
 
 V14 restores the Anti-Janjanator 5000 name. The complete regression runner
 passed. The header and tray checks verified the restored name, and the main

@@ -1,10 +1,11 @@
-Anti-Janjanator 5000 - Windows interface edition v14
+Anti-Janjanator 5000 - Windows interface edition v15
 Restored the Anti-Janjanator 5000 name in the program and interface.
 Restored the original artwork and multi-size application/title-bar/tray icon.
 Website favicon, branding artwork, and example screenshots match the app again.
-Successful GUI Refresh waits 10 seconds before launching Proton, including
-already-current rules. Close and failed refreshes do not launch it; Discord remains closed.
-Launch failures are reported separately without undoing saved settings/backups.
+Successful GUI Refresh unlocks Launch Proton VPN after a 10-second countdown.
+Launching Proton starts a second 10-second countdown for Launch Discord.
+Each launch requires a click. After the Discord step, Process completed and Exit appear.
+Failed launches can be retried while the saved rules and backups remain in place.
 Uses the stable Proton launcher or newest client with its own working directory.
 First-launch setup is mandatory: exit Proton, select the account, and click
 Apply setup and open updater. Exit/X and errors cannot bypass setup.
@@ -24,7 +25,7 @@ marker prevent overwriting preferences on later launches. Main UI retained.
 Renamed executable, window title, interface heading, tray tooltip/menu, and
 Windows file product/title metadata. Discord/Proton refresh behavior unchanged.
 Live status cards, separate close and refresh buttons, disabled refresh until
-verified app exit, account picker, exact backups, and post-refresh Proton launch.
+verified app exit, account picker, and exact backups.
 Embedded proportional header artwork beside the title.
 Matching multi-size application/title-bar icon and a system-tray icon with
 Open Anti-Janjanator 5000 and Exit commands.
