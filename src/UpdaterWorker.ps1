@@ -68,7 +68,7 @@ function Invoke-InterfaceOperation {
         $inventory = @(Get-DiscordInventory $roots)
         $client = Get-DiscordLaunchPath $inventory
         if ($client -ine [string]$Request.DiscordPath) {
-            throw 'The Discord executable changed after Refresh. Close both apps and refresh the rules again.'
+            throw 'The Discord executable changed after Refresh. Reopen the updater to close both apps and refresh the rules again.'
         }
         $mainFiles = @($inventory | Where-Object { [IO.Path]::GetFileName($_.Path) -match '^Discord(PTB|Canary)?\.exe$' })
         $message = 'Discord is already open.'

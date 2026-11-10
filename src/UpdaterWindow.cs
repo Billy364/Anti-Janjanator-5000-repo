@@ -13,8 +13,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyProduct("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyDescription("Discord rules updater for Proton VPN split tunneling")]
-[assembly: System.Reflection.AssemblyVersion("17.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("17.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("18.0.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("18.0.0.0")]
 
 namespace DiscordProtonUpdater
 {
@@ -318,6 +318,7 @@ namespace DiscordProtonUpdater
         private AppInspection last;
         private int clearPolls;
         private bool busy;
+        private bool closeCompleted;
         private bool bindingAccounts;
         private bool closing;
         private int inspectionGeneration, pendingInspectionGeneration;
@@ -384,7 +385,8 @@ namespace DiscordProtonUpdater
                 if (result.Success)
                 {
                     successText = result.Message; AppendLog("SUCCESS: " + result.Message);
-                    if (result.Action == "Refresh")
+                    if (result.Action == "Close") closeCompleted = true;
+                    else if (result.Action == "Refresh")
                     {
                         AppendLog("Discord executable rules: " + result.Total);
                         refreshedDiscordPath = result.DiscordPath;
@@ -441,9 +443,9 @@ namespace DiscordProtonUpdater
         }
         private Label Label(string text, float size, bool bold)
         { return new Label { Text = text, AutoSize = false, Dock = DockStyle.Fill, Font = new Font("Segoe UI", size, bold ? FontStyle.Bold : FontStyle.Regular), ForeColor = ink, TextAlign = ContentAlignment.MiddleLeft }; }
-        private Button ActionButton(string text, bool primary)
+        private Button ActionButton(string text)
         {
-            Button button = new Button { Text = text, Dock = DockStyle.Fill, FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand, Font = new Font("Segoe UI Semibold", 11F), BackColor = primary ? accent : Color.White, ForeColor = primary ? Color.White : accent, UseVisualStyleBackColor = false, Enabled = false };
+            Button button = new Button { Text = text, Dock = DockStyle.Fill, FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand, Font = new Font("Segoe UI Semibold", 11F), UseVisualStyleBackColor = false, Enabled = false };
             button.FlatAppearance.BorderSize = 1; button.FlatAppearance.BorderColor = accent; return button;
         }
         private Panel Card(string title, out Label status, out Label detail)
@@ -483,10 +485,10 @@ namespace DiscordProtonUpdater
             TableLayoutPanel actions = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = new Padding(0, 0, 0, 6) };
             actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50)); actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             actions.RowStyles.Add(new RowStyle(SizeType.Percent, 50)); actions.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-            closeButton = ActionButton("1. Close both apps", false); closeButton.Name = "CloseAppsButton"; closeButton.Margin = new Padding(0, 0, 6, 4);
-            refreshButton = ActionButton("2. Refresh split tunneling rules", true); refreshButton.Name = "RefreshRulesButton"; refreshButton.Margin = new Padding(6, 0, 0, 4);
-            launchProtonButton = ActionButton("3. Launch Proton VPN", true); launchProtonButton.Name = "LaunchProtonButton"; launchProtonButton.Margin = new Padding(0, 4, 6, 0);
-            launchDiscordButton = ActionButton("4. Launch Discord", true); launchDiscordButton.Name = "LaunchDiscordButton"; launchDiscordButton.Margin = new Padding(6, 4, 0, 0);
+            closeButton = ActionButton("1. Close both apps"); closeButton.Name = "CloseAppsButton"; closeButton.Margin = new Padding(0, 0, 6, 4);
+            refreshButton = ActionButton("2. Refresh split tunneling rules"); refreshButton.Name = "RefreshRulesButton"; refreshButton.Margin = new Padding(6, 0, 0, 4);
+            launchProtonButton = ActionButton("3. Launch Proton VPN"); launchProtonButton.Name = "LaunchProtonButton"; launchProtonButton.Margin = new Padding(0, 4, 6, 0);
+            launchDiscordButton = ActionButton("4. Launch Discord"); launchDiscordButton.Name = "LaunchDiscordButton"; launchDiscordButton.Margin = new Padding(6, 4, 0, 0);
             closeButton.Click += delegate { StartOperation("Close"); }; refreshButton.Click += delegate { StartOperation("Refresh"); };
             launchProtonButton.Click += delegate { StartOperation("LaunchProton"); }; launchDiscordButton.Click += delegate { StartOperation("LaunchDiscord"); };
             actions.Controls.Add(closeButton, 0, 0); actions.Controls.Add(refreshButton, 1, 0);
@@ -567,11 +569,15 @@ namespace DiscordProtonUpdater
         {
             return step == Step.Refresh && UiPolicy.CanRefresh(last, clearPolls, busy, SelectedAccount);
         }
-        private void PaintAction(Button button, bool enabled)
+        private bool CanCloseApps()
+        {
+            return step == Step.Refresh && !closeCompleted && UiPolicy.CanClose(last, busy);
+        }
+        private void PaintAction(Button button, bool enabled, bool primary = true)
         {
             button.Enabled = enabled;
-            button.BackColor = enabled ? accent : Color.FromArgb(222, 227, 236);
-            button.ForeColor = enabled ? Color.White : Color.FromArgb(130, 141, 159);
+            button.BackColor = !enabled ? Color.FromArgb(222, 227, 236) : primary ? accent : Color.White;
+            button.ForeColor = !enabled ? Color.FromArgb(130, 141, 159) : primary ? Color.White : accent;
         }
         private void RenderState()
         {
@@ -580,14 +586,8 @@ namespace DiscordProtonUpdater
                 account = last.Accounts.Find(current => String.Equals(current.Path, account.Path, StringComparison.OrdinalIgnoreCase)) ?? account;
             int seconds = SecondsRemaining;
             bool complete = step == Step.Complete;
-            closeButton.Enabled = !complete && UiPolicy.CanClose(last, busy);
-            if (step == Step.Refresh) PaintAction(refreshButton, CanRefresh());
-            else
-            {
-                refreshButton.Enabled = false;
-                refreshButton.BackColor = closeButton.BackColor;
-                refreshButton.ForeColor = closeButton.ForeColor;
-            }
+            PaintAction(closeButton, CanCloseApps(), false);
+            PaintAction(refreshButton, CanRefresh());
             setup.Enabled = !busy && step == Step.Refresh;
             PaintAction(launchProtonButton, !busy && step == Step.LaunchProton && seconds == 0);
             PaintAction(launchDiscordButton, !busy && step == Step.LaunchDiscord && seconds == 0);
@@ -609,7 +609,9 @@ namespace DiscordProtonUpdater
             else if (step == Step.LaunchDiscord) text = seconds > 0 ? "Please wait, launching ProtonVPN..." : "Check that Proton VPN is connected, then click Launch Discord.";
             else if (complete) text = "Process completed";
             else if (!last.Known || last.UnknownCount > 0) text = last.UnverifiedProcesses.Count > 0 ? "Cannot verify process paths: " + String.Join(", ", last.UnverifiedProcesses.ToArray()) + ". Refresh stays locked." : "App status cannot be fully verified. Refresh is locked. Close any inaccessible apps manually, then reload.";
-            else if (!last.AppsExited) text = "Apps are running. Click Close both apps; Refresh unlocks only after all matching processes have exited.";
+            else if (!last.AppsExited) text = closeCompleted
+                ? "An app reopened. Close it manually to continue, or reopen the updater to start over."
+                : "Apps are running. Click Close both apps; Refresh unlocks only after all matching processes have exited.";
             else if (clearPolls < 2) text = "Confirming both apps have fully exited...";
             else if (!last.ScanReady) text = last.ScanDetail;
             else if (account == null) text = "Both apps are closed. Choose your Proton account settings file to enable Refresh.";
@@ -627,7 +629,7 @@ namespace DiscordProtonUpdater
         {
             if (busy || last == null || step == Step.Complete) return;
             if (action == "Refresh" && !CanRefresh()) return;
-            if (action == "Close" && !UiPolicy.CanClose(last, false)) return;
+            if (action == "Close" && !CanCloseApps()) return;
             if (action == "LaunchProton" && !CanLaunch(Step.LaunchProton)) return;
             if (action == "LaunchDiscord" && !CanLaunch(Step.LaunchDiscord)) return;
             OperationRequest request = new OperationRequest { Action = action };

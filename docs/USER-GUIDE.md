@@ -37,7 +37,7 @@ and restoration instructions are in FIRST-LAUNCH.md.
 4. Once both apps are verified as exited, **2. Refresh split tunneling rules**
    becomes available. Click it to enable Include mode if needed and update the
    selected account's Included apps in one backed-up settings change.
-   The button turns white and stays disabled after a successful refresh.
+   Each completed step stays greyed out and disabled for the rest of the run.
 5. The green status box shows **Please wait, rules are being applied...** and
    counts down 10 seconds before **3. Launch Proton VPN** unlocks. Click it
    when it unlocks.
@@ -74,7 +74,8 @@ If a launch fails, read the error in Activity and retry that button. If you
 opened the app manually, the button recognizes the running app. Discord launch
 prefers Discord, then PTB, then Canary among the refreshed installations, and
 uses the newest versioned executable for the chosen channel. If the target
-changes after Refresh, close the apps and refresh again.
+changes after Refresh, reopen the updater and run the close and refresh steps
+again.
 
 ## Discovery and settings
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## v18
+
+- Grey out completed steps and keep them disabled as the workflow advances.
+  Launching Proton VPN can no longer reactivate Close both apps.
+
 ## v17
 
 - Refresh takes on the same white style as Close both apps when clicked and

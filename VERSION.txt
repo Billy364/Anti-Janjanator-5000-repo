@@ -1,5 +1,5 @@
-Anti-Janjanator 5000 - Windows interface edition v17
-Refresh turns white when clicked and stays disabled after success.
+Anti-Janjanator 5000 - Windows interface edition v18
+Completed steps stay greyed out and disabled for the rest of the run.
 Both countdowns appear beside their wait messages in the green status box.
 Restored the Anti-Janjanator 5000 name in the program and interface.
 Restored the original artwork and multi-size application/title-bar/tray icon.
