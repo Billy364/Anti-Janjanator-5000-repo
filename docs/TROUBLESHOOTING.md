@@ -11,15 +11,15 @@ Version 9 and later recognize those omitted defaults.
 A missing enabled flag means off; a missing mode means Standard/Exclude. These
 defaults are defined in [Proton's official source](https://github.com/ProtonVPN/win-app/blob/d2a4f8bc92a0fd296943a7cdd15f4f870c8a87f9/src/Client/Settings/ProtonVPN.Client.Settings.Contracts/DefaultSettings.cs).
 
-1. Close the previous updater and extract the complete v18 ZIP into a new folder.
+1. Close the previous updater and extract the complete v19 ZIP into a new folder.
 2. Run the EXE. If setup is pending, exit Proton from its tray, select the intended
    account, then click **Apply setup and open updater** when it unlocks. Setup
    must finish; Exit/X closes the program, and errors must be resolved/retried.
 3. In the main interface, select the intended account and use **Close both apps**.
 4. Once both cards show Exited, click **Refresh**. Version 10 automatically turns
    Split tunneling on in Include mode and updates Discord's rules together.
-5. Click **Launch Proton VPN** once its countdown ends. When Proton is
-   connected and the second countdown has ended, click **Launch Discord**.
+5. Click **Launch Proton VPN** once the button unlocks. When Proton is
+   connected and **Launch Discord** unlocks, click it.
 
 Refresh can create an absent/null Included-app list, enable Split tunneling,
 and switch Exclude mode to Include mode. It commits these together with the
@@ -51,7 +51,7 @@ open. Check its connection before clicking **Launch Discord**.
 
 ## Refresh succeeded but Proton did not open
 
-After a successful Refresh, wait 10 seconds for **Launch Proton VPN** to
+After a successful Refresh, wait 5 seconds for **Launch Proton VPN** to
 unlock, then click it. If the launch fails, check Activity and retry the
 button. You can also open Proton manually and click the button to proceed.
 Standard installation discovery prefers

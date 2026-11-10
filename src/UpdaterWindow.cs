@@ -13,8 +13,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyProduct("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyDescription("Discord rules updater for Proton VPN split tunneling")]
-[assembly: System.Reflection.AssemblyVersion("18.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("18.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("19.0.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("19.0.0.0")]
 
 namespace DiscordProtonUpdater
 {
@@ -306,12 +306,14 @@ namespace DiscordProtonUpdater
     public sealed class UpdaterForm : Form
     {
         private enum Step { Refresh, Refreshing, LaunchProton, LaunchDiscord, Complete }
-        private const int LaunchDelaySeconds = 10;
+        private static readonly TimeSpan ProtonLaunchDelay = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan DiscordLaunchDelay = TimeSpan.FromSeconds(12);
+        private const int DotIntervalMilliseconds = 400;
         private readonly IUpdaterBackend backend;
         private readonly BackgroundWorker inspection = new BackgroundWorker();
         private readonly BackgroundWorker operation = new BackgroundWorker();
         private readonly Timer poll = new Timer();
-        private readonly Timer countdown = new Timer();
+        private readonly Timer launchWaitTimer = new Timer { Interval = 200 };
         private readonly Timer completionTimer = new Timer { Interval = 2500 };
         private readonly Stopwatch launchDelay = new Stopwatch();
         private readonly ToolTip tips = new ToolTip();
@@ -390,9 +392,9 @@ namespace DiscordProtonUpdater
                     {
                         AppendLog("Discord executable rules: " + result.Total);
                         refreshedDiscordPath = result.DiscordPath;
-                        BeginLaunchCountdown(Step.LaunchProton);
+                        BeginLaunchWait(Step.LaunchProton);
                     }
-                    else if (result.Action == "LaunchProton") BeginLaunchCountdown(Step.LaunchDiscord);
+                    else if (result.Action == "LaunchProton") BeginLaunchWait(Step.LaunchDiscord);
                     else if (result.Action == "LaunchDiscord")
                     {
                         step = Step.Complete;
@@ -410,10 +412,9 @@ namespace DiscordProtonUpdater
                 RenderState(); RequestInspection();
             };
             poll.Interval = 1000; poll.Tick += delegate { RequestInspection(); };
-            countdown.Interval = 200;
-            countdown.Tick += delegate
+            launchWaitTimer.Tick += delegate
             {
-                if (SecondsRemaining == 0) countdown.Stop();
+                if (!busy && LaunchDelayElapsed) launchWaitTimer.Stop();
                 RenderState();
             };
             completionTimer.Tick += delegate { completionTimer.Stop(); Close(); };
@@ -424,7 +425,7 @@ namespace DiscordProtonUpdater
             FormClosing += delegate(object sender, FormClosingEventArgs e)
             {
                 if (busy) { e.Cancel = true; footer.Text = "Wait for the current operation to finish."; return; }
-                closing = true; poll.Stop(); countdown.Stop(); completionTimer.Stop();
+                closing = true; poll.Stop(); launchWaitTimer.Stop(); completionTimer.Stop();
             };
             FormClosed += delegate { closing = true; poll.Stop(); };
         }
@@ -435,7 +436,7 @@ namespace DiscordProtonUpdater
                 resourcesDisposed = true; closing = true; poll.Stop();
                 if (trayIcon != null) { trayIcon.Visible = false; trayIcon.Dispose(); }
                 if (trayMenu != null) trayMenu.Dispose();
-                tips.Dispose(); poll.Dispose(); countdown.Dispose(); completionTimer.Dispose();
+                tips.Dispose(); poll.Dispose(); launchWaitTimer.Dispose(); completionTimer.Dispose();
                 if (headerArtwork != null) headerArtwork.Dispose();
                 if (appIcon != null) appIcon.Dispose();
             }
@@ -551,19 +552,19 @@ namespace DiscordProtonUpdater
             status.Text = count > 0 ? "Running" : "Exited"; status.ForeColor = count > 0 ? Color.FromArgb(156, 93, 8) : Color.FromArgb(35, 119, 77);
             detail.Text = count > 0 ? count + " " + qualifier : "No matching process is running";
         }
-        private int SecondsRemaining
+        private bool LaunchDelayElapsed
         {
-            get { return Math.Max(0, (int)Math.Ceiling(LaunchDelaySeconds - launchDelay.Elapsed.TotalSeconds)); }
+            get { return launchDelay.Elapsed >= (step == Step.LaunchProton ? ProtonLaunchDelay : DiscordLaunchDelay); }
         }
-        private void BeginLaunchCountdown(Step next)
+        private void BeginLaunchWait(Step next)
         {
             step = next;
             launchDelay.Restart();
-            countdown.Start();
+            launchWaitTimer.Start();
         }
         private bool CanLaunch(Step target)
         {
-            return !busy && step == target && SecondsRemaining == 0;
+            return !busy && step == target && LaunchDelayElapsed;
         }
         private bool CanRefresh()
         {
@@ -573,24 +574,24 @@ namespace DiscordProtonUpdater
         {
             return step == Step.Refresh && !closeCompleted && UiPolicy.CanClose(last, busy);
         }
-        private void PaintAction(Button button, bool enabled, bool primary = true)
+        private void PaintAction(Button button, bool enabled)
         {
             button.Enabled = enabled;
-            button.BackColor = !enabled ? Color.FromArgb(222, 227, 236) : primary ? accent : Color.White;
-            button.ForeColor = !enabled ? Color.FromArgb(130, 141, 159) : primary ? Color.White : accent;
+            button.BackColor = enabled ? accent : Color.FromArgb(222, 227, 236);
+            button.ForeColor = enabled ? Color.White : Color.FromArgb(130, 141, 159);
         }
         private void RenderState()
         {
             AccountInfo account = SelectedAccount;
             if (step != Step.Refresh && account != null && last != null)
                 account = last.Accounts.Find(current => String.Equals(current.Path, account.Path, StringComparison.OrdinalIgnoreCase)) ?? account;
-            int seconds = SecondsRemaining;
+            bool launchReady = LaunchDelayElapsed;
             bool complete = step == Step.Complete;
-            PaintAction(closeButton, CanCloseApps(), false);
+            PaintAction(closeButton, CanCloseApps());
             PaintAction(refreshButton, CanRefresh());
             setup.Enabled = !busy && step == Step.Refresh;
-            PaintAction(launchProtonButton, !busy && step == Step.LaunchProton && seconds == 0);
-            PaintAction(launchDiscordButton, !busy && step == Step.LaunchDiscord && seconds == 0);
+            PaintAction(launchProtonButton, !busy && step == Step.LaunchProton && launchReady);
+            PaintAction(launchDiscordButton, !busy && step == Step.LaunchDiscord && launchReady);
             if (last == null) return;
             PaintStatus(protonStatus, protonDetail, last.ProtonCount, "client process(es)");
             PaintStatus(discordStatus, discordDetail, last.DiscordCount, "process(es), including helpers");
@@ -603,10 +604,11 @@ namespace DiscordProtonUpdater
             accountDetail.Text = account == null ? (last.Accounts.Count == 0 ? "No settings file found. Sign in to Proton or browse to the account file." : "Select the account you want to update; saved times help identify it.") : account.Detail;
             tips.SetToolTip(accounts, account == null ? "" : account.Path);
             string text;
-            if (busy && step == Step.LaunchProton) text = "Please wait, launching ProtonVPN...";
+            string dots = new string('.', 1 + (int)(launchDelay.ElapsedMilliseconds / DotIntervalMilliseconds % 3));
+            if (busy && step == Step.LaunchProton) text = "Please wait, launching ProtonVPN" + dots;
             else if (busy) text = "Working... The buttons stay locked until the current operation finishes.";
-            else if (step == Step.LaunchProton) text = seconds > 0 ? "Please wait, rules are being applied..." : "Click Launch Proton VPN.";
-            else if (step == Step.LaunchDiscord) text = seconds > 0 ? "Please wait, launching ProtonVPN..." : "Check that Proton VPN is connected, then click Launch Discord.";
+            else if (step == Step.LaunchProton) text = launchReady ? "Click Launch Proton VPN." : "Please wait, rules are being applied" + dots;
+            else if (step == Step.LaunchDiscord) text = launchReady ? "Check that Proton VPN is connected, then click Launch Discord." : "Please wait, launching ProtonVPN" + dots;
             else if (complete) text = "Process completed";
             else if (!last.Known || last.UnknownCount > 0) text = last.UnverifiedProcesses.Count > 0 ? "Cannot verify process paths: " + String.Join(", ", last.UnverifiedProcesses.ToArray()) + ". Refresh stays locked." : "App status cannot be fully verified. Refresh is locked. Close any inaccessible apps manually, then reload.";
             else if (!last.AppsExited) text = closeCompleted
@@ -618,9 +620,7 @@ namespace DiscordProtonUpdater
             else if (!account.Ready) text = account.Detail;
             else if (account.NeedsSplitTunnelingActivation) text = "Both apps are fully exited. Refresh will turn Split tunneling ON in Include mode and update Discord's rules.";
             else text = successText ?? "Both apps are fully exited. You can now refresh the split tunneling rules.";
-            bool waiting = !busy && seconds > 0 && (step == Step.LaunchProton || step == Step.LaunchDiscord);
-            if (waiting)
-                text += " Next step unlocks in " + seconds + (seconds == 1 ? " second." : " seconds.");
+            bool waiting = !busy && !launchReady && (step == Step.LaunchProton || step == Step.LaunchDiscord);
             warning.Text = text;
             bool ready = !busy && last.AppsExited && clearPolls >= 2 && account != null && account.Ready && last.ScanReady;
             warning.BackColor = ready || complete || waiting ? Color.FromArgb(225, 243, 234) : Color.FromArgb(255, 242, 219);
@@ -636,7 +636,7 @@ namespace DiscordProtonUpdater
             if (action == "Close" || action == "Refresh")
             {
                 step = action == "Refresh" ? Step.Refreshing : Step.Refresh;
-                countdown.Stop();
+                launchWaitTimer.Stop();
                 refreshedDiscordPath = null;
                 request.SettingsPath = SelectedAccount == null ? null : SelectedAccount.Path;
                 request.Roots = new List<string>(last.Roots);
@@ -648,6 +648,7 @@ namespace DiscordProtonUpdater
                 request.DiscordPath = refreshedDiscordPath;
             }
             busy = true; successText = null; clearPolls = 0; inspectionGeneration++;
+            if (action == "LaunchProton") launchWaitTimer.Start();
             if (action == "Close") AppendLog("Closing Discord and the Proton VPN desktop client...");
             else if (action == "Refresh") AppendLog("Rechecking app exit and refreshing the selected account's rules...");
             else AppendLog(action == "LaunchProton" ? "Opening Proton VPN..." : "Opening Discord...");

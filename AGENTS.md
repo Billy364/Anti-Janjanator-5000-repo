@@ -57,13 +57,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 
 The script compiles the C# interface for x64, embeds the header artwork and ICO,
 copies the required workers and documentation, and creates a portable ZIP.
-For the current v18 source, outputs are:
+For the current v19 source, outputs are:
 
 - `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`
 - `dist\Anti-Janjanator-5000\Open Anti-Janjanator 5000.cmd`
 - `dist\Anti-Janjanator-5000\UpdaterWorker.ps1`
 - `dist\Anti-Janjanator-5000\Update-DiscordRules.ps1`
-- `dist\Anti-Janjanator-5000-v18.zip`
+- `dist\Anti-Janjanator-5000-v19.zip`
 
 Distribute the generated ZIP or the entire app folder, not just the EXE: the
 PowerShell workers must stay beside it. The build is unsigned. The
@@ -141,9 +141,10 @@ release versions, keep the assembly version, `VERSION.txt`, ZIP name,
   opted in. Reject stale process inspections from before Close and ignore
   processes that exit during image lookup.
 - Leave the Proton background service running. Successful GUI Refresh, including
-  an already-current result, starts a 10-second countdown to unlock Launch
-  Proton VPN. A successful Proton launch action starts a separate 10-second
-  countdown to unlock Launch Discord. Both launches require a click. Keep
+  an already-current result, starts a five-second wait to unlock Launch
+  Proton VPN. A successful Proton launch action starts a separate 12-second
+  wait to unlock Launch Discord. Animate the status ellipsis during both
+  waits. Both launches require a click. Keep
   failed launches retryable, avoid duplicates, and use the app's own directory
   as its working directory. Launch Discord from the refreshed target and reject
   changes to that target. Show Process completed and close the updater

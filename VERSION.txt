@@ -1,11 +1,12 @@
-Anti-Janjanator 5000 - Windows interface edition v18
+Anti-Janjanator 5000 - Windows interface edition v19
 Completed steps stay greyed out and disabled for the rest of the run.
-Both countdowns appear beside their wait messages in the green status box.
+Enabled steps use a purple background and white text.
+The two launch wait messages show animated dots.
 Restored the Anti-Janjanator 5000 name in the program and interface.
 Restored the original artwork and multi-size application/title-bar/tray icon.
 Website favicon, branding artwork, and example screenshots match the app again.
-Successful GUI Refresh unlocks Launch Proton VPN after a 10-second countdown.
-Launching Proton starts a second 10-second countdown for Launch Discord.
+Successful GUI Refresh unlocks Launch Proton VPN after 5 seconds.
+Launching Proton starts a 12-second wait before Launch Discord unlocks.
 Each launch requires a click. After the Discord step, Process completed appears
 for 2.5 seconds, then the updater closes automatically.
 Failed launches can be retried while the saved rules and backups remain in place.

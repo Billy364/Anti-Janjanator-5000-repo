@@ -11,6 +11,12 @@ using DiscordProtonUpdater;
 class CompatibilityTests
 {
     static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
+    static void RecordWaitDots(HashSet<string> frames, string status, string message)
+    {
+        Check(status == message + "." || status == message + ".." || status == message + "...",
+            "The wait message contained text other than the animated dots: " + status);
+        frames.Add(status);
+    }
     class SlowBackend : IUpdaterBackend
     {
         public readonly ManualResetEvent ScanStarted = new ManualResetEvent(false), ReleaseScan = new ManualResetEvent(false);
@@ -84,6 +90,9 @@ class CompatibilityTests
             form.ShowInTaskbar = false; form.Opacity = 0; form.StartPosition = FormStartPosition.Manual; form.Location = new Point(-20000, -20000);
             int phase = 0; Exception failure = null; DateTime deadline = DateTime.UtcNow.AddSeconds(40);
             Stopwatch sinceClick = new Stopwatch();
+            HashSet<string> waitFrames = new HashSet<string>();
+            const string applyingRules = "Please wait, rules are being applied";
+            const string launchingProton = "Please wait, launching ProtonVPN";
             Button proton = (Button)form.Controls.Find("LaunchProtonButton", true)[0];
             Button discord = (Button)form.Controls.Find("LaunchDiscordButton", true)[0];
             Check(form.Controls.Find("ExitButton", true).Length == 0, "The fifth-step Exit button is still present.");
@@ -97,6 +106,8 @@ class CompatibilityTests
                     if (phase == 0 && form.CloseAppsButton.Enabled)
                     {
                         Check(!proton.Enabled && !discord.Enabled, "A launch was available before refresh.");
+                        Check(form.CloseAppsButton.BackColor == Color.FromArgb(105, 74, 224) && form.CloseAppsButton.ForeColor == Color.White,
+                            "Step 1 did not use the purple and white enabled style.");
                         backend.DelayNextScan = true;
                         typeof(UpdaterForm).GetMethod("RequestInspection", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(form, null); phase = 1;
                     }
@@ -124,16 +135,22 @@ class CompatibilityTests
                             "Refresh did not lock and match Close both apps immediately after the click.");
                         phase = 6;
                     }
-                    else if (phase == 6 && warning.Text.StartsWith("Please wait, rules are being applied... Next step unlocks in "))
+                    else if (phase == 6 && warning.Text.StartsWith(applyingRules))
                     {
-                        Check(proton.Text == "3. Launch Proton VPN" && !proton.Enabled && !discord.Enabled, "Rules countdown changed the button label or unlocked a launch step.");
-                        Check(warning.BackColor == Color.FromArgb(225, 243, 234), "Rules countdown was missing the green status background.");
-                        using (Bitmap preview = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(preview, new Rectangle(Point.Empty, preview.Size)); preview.Save(Path.Combine(args[0], "proton-countdown.png")); }
+                        RecordWaitDots(waitFrames, warning.Text, applyingRules);
+                        Check(proton.Text == "3. Launch Proton VPN" && !proton.Enabled && !discord.Enabled, "The rules wait changed the button label or unlocked a launch step.");
+                        Check(warning.BackColor == Color.FromArgb(225, 243, 234), "The rules wait was missing the green status background.");
+                        using (Bitmap preview = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(preview, new Rectangle(Point.Empty, preview.Size)); preview.Save(Path.Combine(args[0], "proton-wait.png")); }
                         phase = 7;
                     }
+                    else if (phase == 7 && !proton.Enabled)
+                        RecordWaitDots(waitFrames, warning.Text, applyingRules);
                     else if (phase == 7 && proton.Enabled)
                     {
-                        Check(sinceClick.Elapsed.TotalSeconds >= 10 && !discord.Enabled && warning.Text == "Click Launch Proton VPN.", "Proton unlocked early or left the countdown visible.");
+                        Check(sinceClick.Elapsed.TotalSeconds >= 5 && sinceClick.Elapsed.TotalSeconds < 8 &&
+                            !discord.Enabled && warning.Text == "Click Launch Proton VPN.", "Proton did not unlock after the five-second wait.");
+                        Check(waitFrames.Count == 3, "The rules wait did not cycle through all three dot states.");
+                        waitFrames.Clear();
                         Check(form.LastInspection.AppsExited && !form.RefreshRulesButton.Enabled && form.RefreshRulesButton.BackColor == form.CloseAppsButton.BackColor,
                             "Refresh reactivated or changed color when Launch Proton VPN unlocked.");
                         using (Bitmap preview = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(preview, new Rectangle(Point.Empty, preview.Size)); preview.Save(Path.Combine(args[0], "proton-ready.png")); }
@@ -144,17 +161,22 @@ class CompatibilityTests
                         Check(backend.ProtonLaunches == 0, "Proton opened without a click.");
                         sinceClick.Restart(); proton.PerformClick(); phase = 9;
                     }
-                    else if (phase == 9 && warning.Text.StartsWith("Please wait, launching ProtonVPN... Next step unlocks in "))
+                    else if (phase == 9 && form.LastInspection.ProtonCount == 1)
                     {
-                        Check(discord.Text == "4. Launch Discord" && !discord.Enabled, "Discord countdown changed the button label or unlocked a launch step.");
-                        Check(warning.BackColor == Color.FromArgb(225, 243, 234), "Discord countdown was missing the green status background.");
-                        using (Bitmap preview = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(preview, new Rectangle(Point.Empty, preview.Size)); preview.Save(Path.Combine(args[0], "discord-countdown.png")); }
+                        RecordWaitDots(waitFrames, warning.Text, launchingProton);
+                        Check(discord.Text == "4. Launch Discord" && !discord.Enabled, "The Discord wait changed the button label or unlocked a launch step.");
+                        Check(warning.BackColor == Color.FromArgb(225, 243, 234), "The Discord wait was missing the green status background.");
+                        using (Bitmap preview = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(preview, new Rectangle(Point.Empty, preview.Size)); preview.Save(Path.Combine(args[0], "discord-wait.png")); }
                         phase = 10;
                     }
+                    else if (phase == 10 && !discord.Enabled)
+                        RecordWaitDots(waitFrames, warning.Text, launchingProton);
                     else if (phase == 10 && discord.Enabled && form.LastInspection.ProtonCount == 1)
                     {
-                        Check(sinceClick.Elapsed.TotalSeconds >= 10 && backend.ProtonLaunches == 1 && !proton.Enabled &&
-                            warning.Text == "Check that Proton VPN is connected, then click Launch Discord.", "Discord unlocked early or left the countdown visible.");
+                        Check(sinceClick.Elapsed.TotalSeconds >= 12 && sinceClick.Elapsed.TotalSeconds < 15 &&
+                            backend.ProtonLaunches == 1 && !proton.Enabled &&
+                            warning.Text == "Check that Proton VPN is connected, then click Launch Discord.", "Discord did not unlock after the twelve-second wait.");
+                        Check(waitFrames.Count == 3, "The Discord wait did not cycle through all three dot states.");
                         Color disabled = Color.FromArgb(222, 227, 236);
                         Check(!form.CloseAppsButton.Enabled && form.CloseAppsButton.BackColor == disabled &&
                             !form.RefreshRulesButton.Enabled && form.RefreshRulesButton.BackColor == disabled &&
@@ -189,6 +211,7 @@ class CompatibilityTests
             finally { backend.ReleaseScan.Set(); }
         }
         Console.WriteLine("PASS: A delayed pre-close inspection cannot overwrite shutdown; fresh post-close polls unlock refresh.");
+        Console.WriteLine("PASS: Step 1 uses the active style, both wait messages animate their dots, and launches unlock after 5 and 12 seconds.");
         Console.WriteLine("PASS: Completed steps stay greyed out after Proton starts, then the completion message appears before automatic exit.");
         return 0;
     }

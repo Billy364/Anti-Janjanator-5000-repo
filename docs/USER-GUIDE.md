@@ -38,12 +38,11 @@ and restoration instructions are in FIRST-LAUNCH.md.
    becomes available. Click it to enable Include mode if needed and update the
    selected account's Included apps in one backed-up settings change.
    Each completed step stays greyed out and disabled for the rest of the run.
-5. The green status box shows **Please wait, rules are being applied...** and
-   counts down 10 seconds before **3. Launch Proton VPN** unlocks. Click it
-   when it unlocks.
-6. The status box shows **Please wait, launching ProtonVPN...** and counts
-   down another 10 seconds before **4. Launch Discord** unlocks. Confirm
-   Proton is connected, then click the button.
+5. The green status box shows **Please wait, rules are being applied...** with
+   animated dots. Click **3. Launch Proton VPN** when it unlocks after 5 seconds.
+6. The status box shows **Please wait, launching ProtonVPN...** with animated
+   dots. **4. Launch Discord** unlocks after 12 seconds. Confirm Proton is
+   connected, then click the button.
 7. After the Discord launch step succeeds, **Process completed** appears for
    2.5 seconds before the updater closes automatically.
 
@@ -63,7 +62,7 @@ Closing Discord ends active calls. The close action requests a normal exit and
 then ends remaining verified app processes if necessary. A busy Discord updater
 is allowed up to 30 seconds to finish; it is not forcibly terminated. The close
 action only closes apps. A successful Refresh, including when the rules are
-already current, starts the first countdown.
+already current, starts the five-second wait.
 
 Proton's status refers to its desktop client. Its background VPN service is left
 running; this tool does not verify the connection's routing or automatically

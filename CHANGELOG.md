@@ -1,5 +1,12 @@
 # Changelog
 
+## v19
+
+- Give the enabled Close both apps button the same purple and white style as
+  the other steps.
+- Animate the dots in the two wait messages. Launch Proton VPN unlocks after
+  5 seconds and Launch Discord unlocks 12 seconds after Proton launches.
+
 ## v18
 
 - Grey out completed steps and keep them disabled as the workflow advances.

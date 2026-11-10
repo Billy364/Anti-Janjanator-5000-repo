@@ -15,8 +15,8 @@ the intended account if more than one Proton account is saved on the PC.
 - Automatically enables Split tunneling in Include mode when you click Refresh.
 - Preserves unrelated Included apps and preferences, with an exact backup for
   every actual change.
-- Unlocks **3. Launch Proton VPN** 10 seconds after a successful refresh. After
-  you launch Proton, **4. Launch Discord** unlocks after another 10 seconds.
+- Unlocks **3. Launch Proton VPN** 5 seconds after a successful refresh. After
+  you launch Proton, **4. Launch Discord** unlocks after another 12 seconds.
   Confirm Proton is connected before launching Discord. The updater shows
   **Process completed** and closes automatically.
 - Includes the supplied artwork as the header, application icon, and tray icon.
@@ -85,7 +85,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 Open `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`. Keep the generated
 folder together: the two PowerShell workers are needed at runtime. The build
-also creates `dist\Anti-Janjanator-5000-v18.zip` for sharing. Builds are unsigned.
+also creates `dist\Anti-Janjanator-5000-v19.zip` for sharing. Builds are unsigned.
 
 ## Verify
 
