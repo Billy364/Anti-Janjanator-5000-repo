@@ -57,13 +57,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 
 The script compiles the C# interface for x64, embeds the header artwork and ICO,
 copies the required workers and documentation, and creates a portable ZIP.
-For the current v16 source, outputs are:
+For the current v17 source, outputs are:
 
 - `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`
 - `dist\Anti-Janjanator-5000\Open Anti-Janjanator 5000.cmd`
 - `dist\Anti-Janjanator-5000\UpdaterWorker.ps1`
 - `dist\Anti-Janjanator-5000\Update-DiscordRules.ps1`
-- `dist\Anti-Janjanator-5000-v16.zip`
+- `dist\Anti-Janjanator-5000-v17.zip`
 
 Distribute the generated ZIP or the entire app folder, not just the EXE: the
 PowerShell workers must stay beside it. The build is unsigned. The
@@ -125,7 +125,8 @@ release versions, keep the assembly version, `VERSION.txt`, ZIP name,
 
 - Keep Close and Refresh separate. Refresh requires two clear UI polls, a
   complete scan, and a compatible selected account. The GUI's Refresh action
-  enables Split tunneling in Include mode if needed, together with its rule update.
+  enables Split tunneling in Include mode if needed, together with its rule
+  update. Keep Refresh disabled after a successful result until a new cycle.
 - Keep independent process checks in the worker and immediately before writing;
   the enabled UI button alone is not a write guard.
 - Target verified Discord paths and the current Windows session. An unreadable
@@ -144,9 +145,9 @@ release versions, keep the assembly version, `VERSION.txt`, ZIP name,
   countdown to unlock Launch Discord. Both launches require a click. Keep
   failed launches retryable, avoid duplicates, and use the app's own directory
   as its working directory. Launch Discord from the refreshed target and reject
-  changes to that target. Show completion and Exit after the Discord action
-  succeeds. Respect Proton's auto-connect setting and ask the user to check its
-  connection before launching Discord.
+  changes to that target. Show Process completed and close the updater
+  automatically after the Discord action succeeds. Respect Proton's auto-connect
+  setting and ask the user to check its connection before launching Discord.
 - First successful launch per Windows user may configure the selected account
   and global startup preference as described in `docs/FIRST-LAUNCH.md`. Preserve
   unrelated values and exclusions, require Proton's exit, back up changed files,

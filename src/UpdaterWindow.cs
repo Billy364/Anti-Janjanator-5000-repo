@@ -13,8 +13,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyProduct("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyDescription("Discord rules updater for Proton VPN split tunneling")]
-[assembly: System.Reflection.AssemblyVersion("16.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("16.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("17.0.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("17.0.0.0")]
 
 namespace DiscordProtonUpdater
 {
@@ -305,13 +305,14 @@ namespace DiscordProtonUpdater
 
     public sealed class UpdaterForm : Form
     {
-        private enum Step { Refresh, LaunchProton, LaunchDiscord, Complete }
+        private enum Step { Refresh, Refreshing, LaunchProton, LaunchDiscord, Complete }
         private const int LaunchDelaySeconds = 10;
         private readonly IUpdaterBackend backend;
         private readonly BackgroundWorker inspection = new BackgroundWorker();
         private readonly BackgroundWorker operation = new BackgroundWorker();
         private readonly Timer poll = new Timer();
         private readonly Timer countdown = new Timer();
+        private readonly Timer completionTimer = new Timer { Interval = 2500 };
         private readonly Stopwatch launchDelay = new Stopwatch();
         private readonly ToolTip tips = new ToolTip();
         private AppInspection last;
@@ -326,9 +327,8 @@ namespace DiscordProtonUpdater
         private List<string> refreshedRoots;
         private Label protonStatus, discordStatus, protonDetail, discordDetail, warning, scanDetail, accountDetail, footer;
         private ComboBox accounts;
-        private Button closeButton, refreshButton, launchProtonButton, launchDiscordButton, exitButton;
-        private TableLayoutPanel setup, completion;
-        private RowStyle completionRow;
+        private Button closeButton, refreshButton, launchProtonButton, launchDiscordButton;
+        private TableLayoutPanel setup;
         private RichTextBox log;
         private Image headerArtwork;
         private Icon appIcon;
@@ -391,10 +391,20 @@ namespace DiscordProtonUpdater
                         BeginLaunchCountdown(Step.LaunchProton);
                     }
                     else if (result.Action == "LaunchProton") BeginLaunchCountdown(Step.LaunchDiscord);
-                    else if (result.Action == "LaunchDiscord") step = Step.Complete;
+                    else if (result.Action == "LaunchDiscord")
+                    {
+                        step = Step.Complete;
+                        completionTimer.Start();
+                    }
                     if (!String.IsNullOrEmpty(result.BackupPath)) AppendLog("Backup: " + result.BackupPath);
                 }
-                else { successText = null; AppendLog("STOPPED: " + result.Message); MessageBox.Show(this, result.Message, "Operation did not complete", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+                else
+                {
+                    if (step == Step.Refreshing) step = Step.Refresh;
+                    successText = null;
+                    AppendLog("STOPPED: " + result.Message);
+                    MessageBox.Show(this, result.Message, "Operation did not complete", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
                 RenderState(); RequestInspection();
             };
             poll.Interval = 1000; poll.Tick += delegate { RequestInspection(); };
@@ -404,6 +414,7 @@ namespace DiscordProtonUpdater
                 if (SecondsRemaining == 0) countdown.Stop();
                 RenderState();
             };
+            completionTimer.Tick += delegate { completionTimer.Stop(); Close(); };
             Shown += delegate {
                 if (setupResult != null) { AppendLog(setupResult.Message); if (!String.IsNullOrEmpty(setupResult.BackupPath)) AppendLog("First-time setup backups: " + setupResult.BackupPath); }
                 AppendLog("Monitoring the desktop apps. Select the Proton account you want to update."); RequestInspection(); poll.Start();
@@ -411,7 +422,7 @@ namespace DiscordProtonUpdater
             FormClosing += delegate(object sender, FormClosingEventArgs e)
             {
                 if (busy) { e.Cancel = true; footer.Text = "Wait for the current operation to finish."; return; }
-                closing = true; poll.Stop(); countdown.Stop();
+                closing = true; poll.Stop(); countdown.Stop(); completionTimer.Stop();
             };
             FormClosed += delegate { closing = true; poll.Stop(); };
         }
@@ -422,7 +433,7 @@ namespace DiscordProtonUpdater
                 resourcesDisposed = true; closing = true; poll.Stop();
                 if (trayIcon != null) { trayIcon.Visible = false; trayIcon.Dispose(); }
                 if (trayMenu != null) trayMenu.Dispose();
-                tips.Dispose(); poll.Dispose(); countdown.Dispose();
+                tips.Dispose(); poll.Dispose(); countdown.Dispose(); completionTimer.Dispose();
                 if (headerArtwork != null) headerArtwork.Dispose();
                 if (appIcon != null) appIcon.Dispose();
             }
@@ -445,13 +456,9 @@ namespace DiscordProtonUpdater
         }
         private void Build()
         {
-            TableLayoutPanel main = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(22, 14, 22, 14), ColumnCount = 1, RowCount = 9 };
-            float[] heights = { 120, 104, 66, 110 };
+            TableLayoutPanel main = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(22, 14, 22, 14), ColumnCount = 1, RowCount = 8 };
+            float[] heights = { 120, 104, 66, 110, 120, 30 };
             foreach (float height in heights) main.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
-            completionRow = new RowStyle(SizeType.Absolute, 0);
-            main.RowStyles.Add(completionRow);
-            main.RowStyles.Add(new RowStyle(SizeType.Absolute, 120));
-            main.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
             main.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); main.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
             TableLayoutPanel header = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 1, ColumnCount = 2, Margin = new Padding(0, 0, 0, 8) };
             header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 122)); header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -484,12 +491,6 @@ namespace DiscordProtonUpdater
             launchProtonButton.Click += delegate { StartOperation("LaunchProton"); }; launchDiscordButton.Click += delegate { StartOperation("LaunchDiscord"); };
             actions.Controls.Add(closeButton, 0, 0); actions.Controls.Add(refreshButton, 1, 0);
             actions.Controls.Add(launchProtonButton, 0, 1); actions.Controls.Add(launchDiscordButton, 1, 1); main.Controls.Add(actions, 0, 3);
-            completion = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = new Padding(0, 2, 0, 4), Padding = new Padding(13, 0, 0, 0), BackColor = Color.FromArgb(225, 243, 234), Visible = false };
-            completion.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); completion.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
-            Label completed = Label("Process completed", 10F, true); completed.ForeColor = Color.FromArgb(35, 119, 77);
-            exitButton = ActionButton("5. Exit", false); exitButton.Name = "ExitButton"; exitButton.Margin = new Padding(0);
-            exitButton.Click += delegate { Close(); };
-            completion.Controls.Add(completed, 0, 0); completion.Controls.Add(exitButton, 1, 0); main.Controls.Add(completion, 0, 4);
             setup = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = new Padding(0, 6, 0, 0) };
             setup.RowStyles.Add(new RowStyle(SizeType.Absolute, 22)); setup.RowStyles.Add(new RowStyle(SizeType.Absolute, 31)); setup.RowStyles.Add(new RowStyle(SizeType.Absolute, 25)); setup.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             setup.Controls.Add(Label("PROTON ACCOUNT SETTINGS", 9F, true), 0, 0);
@@ -517,13 +518,13 @@ namespace DiscordProtonUpdater
                     catch (Exception error) { MessageBox.Show(this, error.Message, "Folder could not be selected", MessageBoxButtons.OK, MessageBoxIcon.Information); }
                 }
             };
-            links.Controls.Add(reload); links.Controls.Add(browse); links.Controls.Add(folder); setup.Controls.Add(links, 0, 3); main.Controls.Add(setup, 0, 5);
-            scanDetail = Label("Scanning Discord executables...", 9F, false); scanDetail.ForeColor = muted; main.Controls.Add(scanDetail, 0, 6);
+            links.Controls.Add(reload); links.Controls.Add(browse); links.Controls.Add(folder); setup.Controls.Add(links, 0, 3); main.Controls.Add(setup, 0, 4);
+            scanDetail = Label("Scanning Discord executables...", 9F, false); scanDetail.ForeColor = muted; main.Controls.Add(scanDetail, 0, 5);
             TableLayoutPanel activity = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Margin = new Padding(0, 5, 0, 0) };
             activity.RowStyles.Add(new RowStyle(SizeType.Absolute, 24)); activity.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); activity.Controls.Add(Label("ACTIVITY", 9F, true), 0, 0);
             log = new RichTextBox { Name = "ActivityLog", Dock = DockStyle.Fill, ReadOnly = true, BackColor = Color.White, ForeColor = ink, Font = new Font("Consolas", 9F), BorderStyle = BorderStyle.FixedSingle, DetectUrls = false, WordWrap = true };
-            activity.Controls.Add(log, 0, 1); main.Controls.Add(activity, 0, 7);
-            footer = Label("Desktop clients and Discord helpers are monitored. Proton's background service is left running.", 8.5F, false); footer.ForeColor = muted; main.Controls.Add(footer, 0, 8); Controls.Add(main);
+            activity.Controls.Add(log, 0, 1); main.Controls.Add(activity, 0, 6);
+            footer = Label("Desktop clients and Discord helpers are monitored. Proton's background service is left running.", 8.5F, false); footer.ForeColor = muted; main.Controls.Add(footer, 0, 7); Controls.Add(main);
             RenderState();
         }
         private void RequestInspection()
@@ -562,6 +563,10 @@ namespace DiscordProtonUpdater
         {
             return !busy && step == target && SecondsRemaining == 0;
         }
+        private bool CanRefresh()
+        {
+            return step == Step.Refresh && UiPolicy.CanRefresh(last, clearPolls, busy, SelectedAccount);
+        }
         private void PaintAction(Button button, bool enabled)
         {
             button.Enabled = enabled;
@@ -574,15 +579,18 @@ namespace DiscordProtonUpdater
             if (step != Step.Refresh && account != null && last != null)
                 account = last.Accounts.Find(current => String.Equals(current.Path, account.Path, StringComparison.OrdinalIgnoreCase)) ?? account;
             int seconds = SecondsRemaining;
-            closeButton.Enabled = UiPolicy.CanClose(last, busy);
-            PaintAction(refreshButton, UiPolicy.CanRefresh(last, clearPolls, busy, account));
+            bool complete = step == Step.Complete;
+            closeButton.Enabled = !complete && UiPolicy.CanClose(last, busy);
+            if (step == Step.Refresh) PaintAction(refreshButton, CanRefresh());
+            else
+            {
+                refreshButton.Enabled = false;
+                refreshButton.BackColor = closeButton.BackColor;
+                refreshButton.ForeColor = closeButton.ForeColor;
+            }
             setup.Enabled = !busy && step == Step.Refresh;
             PaintAction(launchProtonButton, !busy && step == Step.LaunchProton && seconds == 0);
             PaintAction(launchDiscordButton, !busy && step == Step.LaunchDiscord && seconds == 0);
-            bool complete = step == Step.Complete;
-            completion.Visible = complete;
-            completionRow.Height = complete ? 48 : 0;
-            exitButton.Enabled = complete && !busy;
             if (last == null) return;
             PaintStatus(protonStatus, protonDetail, last.ProtonCount, "client process(es)");
             PaintStatus(discordStatus, discordDetail, last.DiscordCount, "process(es), including helpers");
@@ -599,7 +607,7 @@ namespace DiscordProtonUpdater
             else if (busy) text = "Working... The buttons stay locked until the current operation finishes.";
             else if (step == Step.LaunchProton) text = seconds > 0 ? "Please wait, rules are being applied..." : "Click Launch Proton VPN.";
             else if (step == Step.LaunchDiscord) text = seconds > 0 ? "Please wait, launching ProtonVPN..." : "Check that Proton VPN is connected, then click Launch Discord.";
-            else if (complete) text = successText;
+            else if (complete) text = "Process completed";
             else if (!last.Known || last.UnknownCount > 0) text = last.UnverifiedProcesses.Count > 0 ? "Cannot verify process paths: " + String.Join(", ", last.UnverifiedProcesses.ToArray()) + ". Refresh stays locked." : "App status cannot be fully verified. Refresh is locked. Close any inaccessible apps manually, then reload.";
             else if (!last.AppsExited) text = "Apps are running. Click Close both apps; Refresh unlocks only after all matching processes have exited.";
             else if (clearPolls < 2) text = "Confirming both apps have fully exited...";
@@ -617,15 +625,15 @@ namespace DiscordProtonUpdater
         }
         private void StartOperation(string action)
         {
-            if (busy || last == null) return;
-            if (action == "Refresh" && !UiPolicy.CanRefresh(last, clearPolls, false, SelectedAccount)) return;
+            if (busy || last == null || step == Step.Complete) return;
+            if (action == "Refresh" && !CanRefresh()) return;
             if (action == "Close" && !UiPolicy.CanClose(last, false)) return;
             if (action == "LaunchProton" && !CanLaunch(Step.LaunchProton)) return;
             if (action == "LaunchDiscord" && !CanLaunch(Step.LaunchDiscord)) return;
             OperationRequest request = new OperationRequest { Action = action };
             if (action == "Close" || action == "Refresh")
             {
-                step = Step.Refresh;
+                step = action == "Refresh" ? Step.Refreshing : Step.Refresh;
                 countdown.Stop();
                 refreshedDiscordPath = null;
                 request.SettingsPath = SelectedAccount == null ? null : SelectedAccount.Path;

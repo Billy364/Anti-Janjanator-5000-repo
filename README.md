@@ -17,7 +17,8 @@ the intended account if more than one Proton account is saved on the PC.
   every actual change.
 - Unlocks **3. Launch Proton VPN** 10 seconds after a successful refresh. After
   you launch Proton, **4. Launch Discord** unlocks after another 10 seconds.
-  Confirm Proton is connected before launching Discord, then click **5. Exit**.
+  Confirm Proton is connected before launching Discord. The updater shows
+  **Process completed** and closes automatically.
 - Includes the supplied artwork as the header, application icon, and tray icon.
 
 Proton's background VPN service stays running. This unofficial utility was
@@ -84,7 +85,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 Open `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`. Keep the generated
 folder together: the two PowerShell workers are needed at runtime. The build
-also creates `dist\Anti-Janjanator-5000-v16.zip` for sharing. Builds are unsigned.
+also creates `dist\Anti-Janjanator-5000-v17.zip` for sharing. Builds are unsigned.
 
 ## Verify
 

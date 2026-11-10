@@ -37,14 +37,15 @@ and restoration instructions are in FIRST-LAUNCH.md.
 4. Once both apps are verified as exited, **2. Refresh split tunneling rules**
    becomes available. Click it to enable Include mode if needed and update the
    selected account's Included apps in one backed-up settings change.
+   The button turns white and stays disabled after a successful refresh.
 5. The green status box shows **Please wait, rules are being applied...** and
    counts down 10 seconds before **3. Launch Proton VPN** unlocks. Click it
    when it unlocks.
 6. The status box shows **Please wait, launching ProtonVPN...** and counts
    down another 10 seconds before **4. Launch Discord** unlocks. Confirm
    Proton is connected, then click the button.
-7. After the Discord launch step succeeds, **Process completed** and **5. Exit**
-   appear. Click Exit to close the updater.
+7. After the Discord launch step succeeds, **Process completed** appears for
+   2.5 seconds before the updater closes automatically.
 
 Newly signed-in accounts may omit default settings. This is supported: the app
 recognizes off/Exclude mode rather than treating omitted keys as an unknown

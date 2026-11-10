@@ -1,5 +1,12 @@
 # Changelog
 
+## v17
+
+- Refresh takes on the same white style as Close both apps when clicked and
+  stays disabled after success. A failed refresh can be retried.
+- After the Discord launch succeeds, show Process completed for 2.5 seconds
+  and close the updater automatically.
+
 ## v16
 
 - Moved both countdowns into the green status box next to the wait message.
