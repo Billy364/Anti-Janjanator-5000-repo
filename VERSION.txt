@@ -1,4 +1,5 @@
-Anti-Janjanator 5000 - Windows interface edition v15
+Anti-Janjanator 5000 - Windows interface edition v16
+Both countdowns appear beside their wait messages in the green status box.
 Restored the Anti-Janjanator 5000 name in the program and interface.
 Restored the original artwork and multi-size application/title-bar/tray icon.
 Website favicon, branding artwork, and example screenshots match the app again.

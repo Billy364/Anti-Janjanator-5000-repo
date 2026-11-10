@@ -1,5 +1,10 @@
 # Changelog
 
+## v16
+
+- Moved both countdowns into the green status box next to the wait message.
+  The launch buttons keep their labels as the status counts down.
+
 ## v15
 
 - Added numbered Launch Proton VPN and Launch Discord buttons. Each unlocks

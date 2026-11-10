@@ -108,14 +108,16 @@ class CompatibilityTests
                         using (Bitmap preview = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(preview, new Rectangle(Point.Empty, preview.Size)); preview.Save(Path.Combine(args[0], "automatic-activation.png")); }
                         sinceClick.Restart(); form.RefreshRulesButton.PerformClick(); phase = 4;
                     }
-                    else if (phase == 4 && warning.Text == "Please wait, rules are being applied...")
+                    else if (phase == 4 && warning.Text.StartsWith("Please wait, rules are being applied... Next step unlocks in "))
                     {
-                        Check(proton.Text.Contains("s)") && !proton.Enabled && !discord.Enabled && !exit.Visible, "Rules countdown did not lock the launch steps.");
+                        Check(proton.Text == "3. Launch Proton VPN" && !proton.Enabled && !discord.Enabled && !exit.Visible, "Rules countdown changed the button label or unlocked a launch step.");
+                        Check(warning.BackColor == Color.FromArgb(225, 243, 234), "Rules countdown was missing the green status background.");
+                        using (Bitmap preview = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(preview, new Rectangle(Point.Empty, preview.Size)); preview.Save(Path.Combine(args[0], "proton-countdown.png")); }
                         phase = 5;
                     }
                     else if (phase == 5 && proton.Enabled)
                     {
-                        Check(sinceClick.Elapsed.TotalSeconds >= 10 && !discord.Enabled && !exit.Visible, "Proton unlocked early or skipped a step.");
+                        Check(sinceClick.Elapsed.TotalSeconds >= 10 && !discord.Enabled && !exit.Visible && warning.Text == "Click Launch Proton VPN.", "Proton unlocked early or left the countdown visible.");
                         sinceClick.Restart(); phase = 6;
                     }
                     else if (phase == 6 && sinceClick.ElapsedMilliseconds >= 300)
@@ -123,15 +125,17 @@ class CompatibilityTests
                         Check(backend.ProtonLaunches == 0, "Proton opened without a click.");
                         sinceClick.Restart(); proton.PerformClick(); phase = 7;
                     }
-                    else if (phase == 7 && discord.Text.Contains("s)"))
+                    else if (phase == 7 && warning.Text.StartsWith("Please wait, launching ProtonVPN... Next step unlocks in "))
                     {
-                        Check(warning.Text == "Please wait, launching ProtonVPN..." && !discord.Enabled && !exit.Visible, "Discord countdown or status was missing.");
+                        Check(discord.Text == "4. Launch Discord" && !discord.Enabled && !exit.Visible, "Discord countdown changed the button label or unlocked a launch step.");
+                        Check(warning.BackColor == Color.FromArgb(225, 243, 234), "Discord countdown was missing the green status background.");
                         using (Bitmap preview = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(preview, new Rectangle(Point.Empty, preview.Size)); preview.Save(Path.Combine(args[0], "discord-countdown.png")); }
                         phase = 8;
                     }
                     else if (phase == 8 && discord.Enabled)
                     {
-                        Check(sinceClick.Elapsed.TotalSeconds >= 10 && backend.ProtonLaunches == 1 && !proton.Enabled && !exit.Visible, "Discord unlocked early or skipped a step.");
+                        Check(sinceClick.Elapsed.TotalSeconds >= 10 && backend.ProtonLaunches == 1 && !proton.Enabled && !exit.Visible &&
+                            warning.Text == "Check that Proton VPN is connected, then click Launch Discord.", "Discord unlocked early or left the countdown visible.");
                         sinceClick.Restart(); phase = 9;
                     }
                     else if (phase == 9 && sinceClick.ElapsedMilliseconds >= 300)

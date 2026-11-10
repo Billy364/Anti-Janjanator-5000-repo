@@ -57,13 +57,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 
 The script compiles the C# interface for x64, embeds the header artwork and ICO,
 copies the required workers and documentation, and creates a portable ZIP.
-For the current v15 source, outputs are:
+For the current v16 source, outputs are:
 
 - `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`
 - `dist\Anti-Janjanator-5000\Open Anti-Janjanator 5000.cmd`
 - `dist\Anti-Janjanator-5000\UpdaterWorker.ps1`
 - `dist\Anti-Janjanator-5000\Update-DiscordRules.ps1`
-- `dist\Anti-Janjanator-5000-v15.zip`
+- `dist\Anti-Janjanator-5000-v16.zip`
 
 Distribute the generated ZIP or the entire app folder, not just the EXE: the
 PowerShell workers must stay beside it. The build is unsigned. The

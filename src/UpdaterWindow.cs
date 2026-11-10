@@ -13,8 +13,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyProduct("Anti-Janjanator 5000")]
 [assembly: System.Reflection.AssemblyDescription("Discord rules updater for Proton VPN split tunneling")]
-[assembly: System.Reflection.AssemblyVersion("15.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("15.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("16.0.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("16.0.0.0")]
 
 namespace DiscordProtonUpdater
 {
@@ -568,12 +568,6 @@ namespace DiscordProtonUpdater
             button.BackColor = enabled ? accent : Color.FromArgb(222, 227, 236);
             button.ForeColor = enabled ? Color.White : Color.FromArgb(130, 141, 159);
         }
-        private void RenderLaunchButton(Button button, string label, Step target, int seconds)
-        {
-            bool active = step == target;
-            button.Text = active && seconds > 0 ? label + " (" + seconds + "s)" : label;
-            PaintAction(button, !busy && active && seconds == 0);
-        }
         private void RenderState()
         {
             AccountInfo account = SelectedAccount;
@@ -583,8 +577,8 @@ namespace DiscordProtonUpdater
             closeButton.Enabled = UiPolicy.CanClose(last, busy);
             PaintAction(refreshButton, UiPolicy.CanRefresh(last, clearPolls, busy, account));
             setup.Enabled = !busy && step == Step.Refresh;
-            RenderLaunchButton(launchProtonButton, "3. Launch Proton VPN", Step.LaunchProton, seconds);
-            RenderLaunchButton(launchDiscordButton, "4. Launch Discord", Step.LaunchDiscord, seconds);
+            PaintAction(launchProtonButton, !busy && step == Step.LaunchProton && seconds == 0);
+            PaintAction(launchDiscordButton, !busy && step == Step.LaunchDiscord && seconds == 0);
             bool complete = step == Step.Complete;
             completion.Visible = complete;
             completionRow.Height = complete ? 48 : 0;
@@ -614,9 +608,12 @@ namespace DiscordProtonUpdater
             else if (!account.Ready) text = account.Detail;
             else if (account.NeedsSplitTunnelingActivation) text = "Both apps are fully exited. Refresh will turn Split tunneling ON in Include mode and update Discord's rules.";
             else text = successText ?? "Both apps are fully exited. You can now refresh the split tunneling rules.";
+            bool waiting = !busy && seconds > 0 && (step == Step.LaunchProton || step == Step.LaunchDiscord);
+            if (waiting)
+                text += " Next step unlocks in " + seconds + (seconds == 1 ? " second." : " seconds.");
             warning.Text = text;
             bool ready = !busy && last.AppsExited && clearPolls >= 2 && account != null && account.Ready && last.ScanReady;
-            warning.BackColor = ready || complete ? Color.FromArgb(225, 243, 234) : Color.FromArgb(255, 242, 219);
+            warning.BackColor = ready || complete || waiting ? Color.FromArgb(225, 243, 234) : Color.FromArgb(255, 242, 219);
         }
         private void StartOperation(string action)
         {
