@@ -282,24 +282,24 @@ function Test-ProcessHasExited {
 
 function Get-DiscordAppProcesses {
     param([string[]]$Roots, [object[]]$Inventory, [switch]$UpdatersOnly)
-    $names = @($Inventory | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_.Path) } | Sort-Object -Unique)
-    if ($UpdatersOnly) { $names = @($names | Where-Object { $_ -in @('Update', 'updater_launcher') }) }
-    if ($names.Count -eq 0) { return }
+    $names = @('Discord', 'DiscordPTB', 'DiscordCanary', 'Update', 'updater_launcher',
+        'DiscordHookHelper', 'DiscordHookHelper64', 'DiscordSystemHelper', 'audio_effects_helper', 'gpu_encoder_helper')
+    $names += @($Inventory | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_.Path) })
+    $names = @($names | Sort-Object -Unique)
+    if ($UpdatersOnly) { $names = @('Update', 'updater_launcher') }
     $session = [Diagnostics.Process]::GetCurrentProcess().SessionId
     foreach ($process in @(Get-Process -Name $names -ErrorAction SilentlyContinue)) {
         if (Test-ProcessHasExited $process) { continue }
         if ($process.SessionId -ne $session) { continue }
         $path = $null
         try { $path = $process.Path } catch { }
+        if (Test-ProcessHasExited $process) { continue }
         if (-not $path) {
             # A process can finish between enumeration and reading its image.
             # That is a successful exit, not a permission/verification failure.
             try { if ($process.HasExited) { continue } } catch { }
-            if ($process.ProcessName -match '^Discord(PTB|Canary)?$' -or
-                $process.ProcessName -in @('Update', 'updater_launcher')) {
-                throw 'Cannot verify the executable path of a running Discord app/updater. No unidentified processes will be stopped.'
-            }
-            continue
+            throw ('Cannot verify the executable path of a possible Discord app/helper/updater: ' +
+                $process.ProcessName + ' (PID ' + $process.Id + '). Close that process manually and retry.')
         }
         if (Test-ManagedPath $path $Roots) { $process }
     }
@@ -334,28 +334,44 @@ function Wait-AppGroupExit {
 function Close-AppGroup {
     param([string]$Label, [scriptblock]$FindProcesses)
     $processes = @(& $FindProcesses)
-    if ($processes.Count -eq 0) { Write-Host ('No running ' + $Label + ' process was found.'); return }
     Write-Host ('Closing ' + $Label + '...')
     foreach ($process in $processes) {
         Write-Host ('  PID ' + $process.Id + ': ' + $process.Path)
         try { [void]$process.CloseMainWindow() } catch { }
     }
-    if (Wait-AppGroupExit $FindProcesses 5) { Write-Host ($Label + ' exited.'); return }
+    [void](Wait-AppGroupExit $FindProcesses 5)
     # Tray apps can ignore a window-close request. Stop only the freshly
     # rediscovered processes whose image paths were verified by the finder.
-    Write-Host ('Ending remaining ' + $Label + ' processes...')
-    foreach ($process in @(& $FindProcesses)) {
-        try { Stop-Process -InputObject $process -Force -ErrorAction Stop }
-        catch {
-            if (@(& $FindProcesses | Where-Object { $_.Id -eq $process.Id }).Count -gt 0) {
-                throw "Could not close $Label. No settings will be written. $($_.Exception.Message)"
+    $deadline = [DateTime]::UtcNow.AddSeconds(10)
+    $quietSince = $null
+    do {
+        $remaining = @(& $FindProcesses)
+        if ($remaining.Count -eq 0) {
+            if ($null -eq $quietSince) { $quietSince = [DateTime]::UtcNow }
+            if (([DateTime]::UtcNow - $quietSince).TotalSeconds -ge 1) {
+                Write-Host ($Label + ' exited; verified no matching process remains.')
+                return
+            }
+        } else {
+            $quietSince = $null
+            Write-Host ('Ending remaining ' + $Label + ' processes...')
+            foreach ($process in $remaining) {
+                if (Test-ProcessHasExited $process) { continue }
+                Write-Host ('  PID ' + $process.Id + ': ' + $process.Path)
+                try { Stop-Process -InputObject $process -Force -ErrorAction Stop }
+                catch {
+                    if (@(& $FindProcesses | Where-Object { $_.Id -eq $process.Id }).Count -gt 0) {
+                        throw "Could not close $Label. No settings will be written. $($_.Exception.Message)"
+                    }
+                }
             }
         }
-    }
-    if (-not (Wait-AppGroupExit $FindProcesses 10)) {
-        throw "$Label is still running or relaunched itself. No settings will be written."
-    }
-    Write-Host ($Label + ' exited; verified no matching process remains.')
+        if ([DateTime]::UtcNow -ge $deadline) {
+            $details = @(& $FindProcesses | ForEach-Object { $_.ProcessName + ' (PID ' + $_.Id + ')' })
+            throw "$Label did not stay closed. Remaining processes: $($details -join ', '). Retry Close. No settings will be written."
+        }
+        Start-Sleep -Milliseconds 250
+    } while ($true)
 }
 
 function Close-DiscordAndProton {
@@ -371,6 +387,9 @@ function Close-DiscordAndProton {
         }
     }
     $findDiscord = {
+        if (@(& $findUpdaters).Count -gt 0) {
+            throw 'Discord started updating while closing. Wait for the updater to finish and retry Close.'
+        }
         Get-DiscordAppProcesses $Roots $Inventory | Where-Object {
             $_.ProcessName -notin @('Update', 'updater_launcher')
         }

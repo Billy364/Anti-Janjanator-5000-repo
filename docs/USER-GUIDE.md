@@ -59,7 +59,10 @@ unlocking it. The write operation independently rechecks that the apps are gone;
 an app restarting after a button lights up still blocks the write.
 
 Closing Discord ends active calls. The close action requests a normal exit and
-then ends remaining verified app processes if necessary. A busy Discord updater
+then repeatedly stops verified leftovers and replacements for up to 10 seconds.
+It checks for a full second without matching processes before reporting success.
+Known Discord helpers are checked even if an update removed their files.
+A busy Discord updater
 is allowed up to 30 seconds to finish; it is not forcibly terminated. The close
 action only closes apps. A successful Refresh, including when the rules are
 already current, starts the five-second wait.

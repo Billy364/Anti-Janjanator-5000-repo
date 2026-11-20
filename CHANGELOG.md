@@ -1,5 +1,13 @@
 # Changelog
 
+## v20
+
+- Rescan during shutdown and stop verified replacement Discord processes.
+  Require a full second with no matching processes before reporting success.
+- Include known helpers even when their old executable files were removed.
+  Report inaccessible process names and IDs, and stop shutdown if an updater
+  starts during the close action.
+
 ## v19
 
 - Give the enabled Close both apps button the same purple and white style as

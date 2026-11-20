@@ -72,7 +72,9 @@ function Invoke-InterfaceOperation {
         }
         $mainFiles = @($inventory | Where-Object { [IO.Path]::GetFileName($_.Path) -match '^Discord(PTB|Canary)?\.exe$' })
         $message = 'Discord is already open.'
-        if (@(Get-DiscordAppProcesses $roots $mainFiles).Count -eq 0) {
+        $runningClients = @(Get-DiscordAppProcesses $roots $mainFiles |
+            Where-Object { $_.ProcessName -match '^Discord(PTB|Canary)?$' })
+        if ($runningClients.Count -eq 0) {
             Start-DesktopClient $client
             $message = 'Discord launch requested.'
         }
@@ -81,9 +83,10 @@ function Invoke-InterfaceOperation {
     if ($Request.Action -eq 'Close') {
         $session = [Diagnostics.Process]::GetCurrentProcess().SessionId
         foreach ($process in @(Get-Process -Name 'Discord','DiscordPTB','DiscordCanary' -ErrorAction SilentlyContinue)) {
-            if ($process.SessionId -ne $session) { continue }
+            if ((Test-ProcessHasExited $process) -or $process.SessionId -ne $session) { continue }
             $path = $null
             try { $path = $process.Path } catch { }
+            if (Test-ProcessHasExited $process) { continue }
             if (-not $path -or -not (Test-ManagedPath $path $roots)) {
                 throw 'The running Discord installation could not be verified. Select its installation folder, or close Discord manually.'
             }

@@ -9,15 +9,35 @@ $script:injectOnRead = $false
 $script:launches = @(); $script:failLaunch = $false; $script:failResolve = $false
 $script:originalLaunchResolver = ${function:Get-ProtonLaunchPath}
 $script:originalReader = ${function:Read-ProtonSettings}
+$script:respawnAfterStop = $false
+$script:updaterAfterStop = $false
+$script:respawnDuringQuiet = $false
+$script:emptyDiscordScans = 0
 $session = [Diagnostics.Process]::GetCurrentProcess().SessionId
 function global:Get-Process {
     [CmdletBinding()]param([string[]]$Name)
+    if ($script:respawnDuringQuiet -and $Name -contains 'Discord' -and
+        @($script:fakeProcesses | Where-Object { $_.Path -eq $main -and $_.SessionId -eq $session }).Count -eq 0) {
+        $script:emptyDiscordScans++
+        if ($script:emptyDiscordScans -eq 2) {
+            $script:respawnDuringQuiet = $false
+            $script:fakeProcesses += New-FakeProcess 103 $main
+        }
+    }
     $script:fakeProcesses | Where-Object { $Name -contains $_.ProcessName }
 }
 function global:Stop-Process {
     [CmdletBinding()]param([object]$InputObject,[switch]$Force)
     $script:stopped += $InputObject.Id
     $script:fakeProcesses = @($script:fakeProcesses | Where-Object { $_.Id -ne $InputObject.Id })
+    if ($script:respawnAfterStop -and $InputObject.Id -eq 100) {
+        $script:respawnAfterStop = $false
+        $script:fakeProcesses += New-FakeProcess 102 $main
+    }
+    if ($script:updaterAfterStop -and $InputObject.Id -eq 108) {
+        $script:updaterAfterStop = $false
+        $script:fakeProcesses += New-FakeProcess 109 (Join-Path $root 'Update.exe')
+    }
 }
 function Get-ProtonLaunchPath { if($script:failResolve) { throw 'Synthetic Proton installation lookup failed.' }; return $protonPath }
 function global:Start-Process {
@@ -93,6 +113,42 @@ Assert-True ($closed.Success -and $script:fakeProcesses.Count -eq 0 -and $script
 Assert-True ($script:readCount -eq $readsBefore -and (Get-FileHash -LiteralPath $file).Hash -eq $hash) 'Close depended on account selection or changed settings.'
 Assert-True ($script:launches.Count -eq $launchCount) 'Close reopened an app.'
 Write-Output 'PASS: Close exits both apps and helpers without an account selection, and does not refresh settings.'
+
+# Helpers whose files were removed are absent from the current inventory, and
+# a tray/client process may respawn after the first force-stop batch.
+$retiredHelper = Join-Path $root 'app-1.0.1\DiscordHookHelper64.exe'
+$outsideHelper = New-FakeProcess 104 'C:\Other\DiscordHookHelper64.exe'
+$otherUser = New-FakeProcess 105 $main
+$otherUser.SessionId = $session + 1
+$script:fakeProcesses = @((New-FakeProcess 100 $main), (New-FakeProcess 101 $retiredHelper), $outsideHelper, $otherUser)
+$script:respawnAfterStop = $true
+$script:respawnDuringQuiet = $true
+$script:emptyDiscordScans = 0
+$closed = Invoke-InterfaceOperation ([pscustomobject]@{ Action='Close'; SettingsPath=$null; Roots=@($root) })
+Assert-True ($closed.Success -and $script:fakeProcesses.Count -eq 2) 'Close did not drain replacement processes or touched unrelated processes.'
+foreach ($expected in @(100,101,102,103)) {
+    Assert-True ($script:stopped -contains $expected) ('Close missed the retired helper or replacement process ' + $expected)
+}
+Assert-True ($script:stopped -notcontains 104 -and $script:stopped -notcontains 105) 'Close targeted an unrelated path or another session.'
+Assert-True ((Get-FileHash -LiteralPath $file).Hash -eq $hash -and $script:launches.Count -eq $launchCount) 'Close changed settings or launched an app.'
+Write-Output 'PASS: Close drains tray/client replacements, rechecks a quiet interval, and closes retired helpers while preserving other paths/sessions.'
+
+$script:fakeProcesses = @((New-FakeProcess 106 (Join-Path $root 'Update.exe')))
+$stoppedBefore = $script:stopped.Count
+Assert-Rejected { Invoke-InterfaceOperation ([pscustomobject]@{ Action='Close'; SettingsPath=$null; Roots=@($root) }) } 'updater is still running'
+Assert-True ($script:stopped.Count -eq $stoppedBefore) 'Close terminated an active updater.'
+$unreadable = New-FakeProcess 107 $retiredHelper
+$unreadable.Path = $null
+$script:fakeProcesses = @($unreadable)
+Assert-Rejected { Invoke-InterfaceOperation ([pscustomobject]@{ Action='Close'; SettingsPath=$null; Roots=@($root) }) } 'Cannot verify'
+Assert-True ($script:stopped.Count -eq $stoppedBefore) 'Close terminated a process with an unreadable path.'
+Write-Output 'PASS: Updaters and inaccessible helper paths block shutdown without terminating an unverified process.'
+
+$script:fakeProcesses = @((New-FakeProcess 108 $main))
+$script:updaterAfterStop = $true
+Assert-Rejected { Invoke-InterfaceOperation ([pscustomobject]@{ Action='Close'; SettingsPath=$null; Roots=@($root) }) } 'started updating'
+Assert-True ($script:stopped -notcontains 109 -and $script:fakeProcesses.Count -eq 1) 'A newly started updater was terminated.'
+Write-Output 'PASS: An updater starting during shutdown interrupts the close loop and remains running.'
 $other=New-FakeProcess 20 $protonPath;$other.SessionId=$session+1;$script:fakeProcesses=@($other)
 $differentSession=Invoke-InterfaceOperation $request
 Assert-True ($differentSession.Success) 'Another Windows session blocked the current user account.'

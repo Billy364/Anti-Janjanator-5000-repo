@@ -1,4 +1,14 @@
-# Interface validation — November 9, 2026
+# Interface validation — November 19, 2026
+
+V20 adds synthetic shutdown cases for a tray/client process spawning a
+replacement during termination, a process reopening during the quiet check,
+and a helper whose old executable is absent from the inventory. The tests
+verify that unrelated paths and other sessions remain running, inaccessible
+paths block the operation, and an updater starting during shutdown is preserved.
+These checks use simulated processes. A read-only scan found six running
+Discord processes on the development PC, and all six were recognized by the
+existing finder. The reported live shutdown failure has not been reproduced
+against those processes.
 
 V15 tests the five-step workflow with fixture processes. The form test waits for
 both 10-second countdowns, checks their status messages, and confirms that each

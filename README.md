@@ -85,7 +85,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 Open `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`. Keep the generated
 folder together: the two PowerShell workers are needed at runtime. The build
-also creates `dist\Anti-Janjanator-5000-v19.zip` for sharing. Builds are unsigned.
+also creates `dist\Anti-Janjanator-5000-v20.zip` for sharing. Builds are unsigned.
 
 ## Verify
 

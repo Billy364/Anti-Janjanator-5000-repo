@@ -1,4 +1,6 @@
-Anti-Janjanator 5000 - Windows interface edition v19
+Anti-Janjanator 5000 - Windows interface edition v20
+Shutdown rescans for replacement Discord processes and known retired helpers.
+Verifies one full second without matching processes before reporting success.
 Completed steps stay greyed out and disabled for the rest of the run.
 Enabled steps use a purple background and white text.
 The two launch wait messages show animated dots.
