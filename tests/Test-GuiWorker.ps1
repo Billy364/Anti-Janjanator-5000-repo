@@ -13,6 +13,9 @@ $script:respawnAfterStop = $false
 $script:updaterAfterStop = $false
 $script:respawnDuringQuiet = $false
 $script:emptyDiscordScans = 0
+$script:disconnectCount = 0
+$script:failDisconnect = $false
+$script:protonPresentAtDisconnect = $false
 $session = [Diagnostics.Process]::GetCurrentProcess().SessionId
 function global:Get-Process {
     [CmdletBinding()]param([string[]]$Name)
@@ -47,6 +50,14 @@ function global:Start-Process {
     $script:launches += $FilePath
 }
 function Wait-AppGroupExit { param([scriptblock]$FindProcesses,[int]$TimeoutSeconds) return (@(& $FindProcesses).Count -eq 0) }
+function Disconnect-ProtonBeforeClose {
+    if (@(Get-DiscordAppProcesses @($root) @(Get-DiscordInventory @($root))).Count -gt 0) {
+        throw 'Proton disconnection happened before Discord shutdown.'
+    }
+    $script:disconnectCount++
+    if (@(Get-ProtonAppProcesses).Count -gt 0) { $script:protonPresentAtDisconnect = $true }
+    if ($script:failDisconnect) { throw 'Synthetic disconnect failure.' }
+}
 function Read-ProtonSettings {
     param([string]$Path,[switch]$EnableSplitTunneling)
     $script:readCount++
@@ -108,11 +119,25 @@ Write-Output 'PASS: Changed and already-current refreshes leave both apps closed
 $script:fakeProcesses=@((New-FakeProcess 10 $main),(New-FakeProcess 11 $helper),(New-FakeProcess 12 $protonPath))
 $readsBefore=$script:readCount
 $launchCount=$script:launches.Count
+$disconnectsBefore=$script:disconnectCount
 $closed=Invoke-InterfaceOperation ([pscustomobject]@{Action='Close';SettingsPath=$null;Roots=@($root)})
 Assert-True ($closed.Success -and $script:fakeProcesses.Count -eq 0 -and $script:stopped.Count -eq 3) 'Close did not exit all expected app processes.'
 Assert-True ($script:readCount -eq $readsBefore -and (Get-FileHash -LiteralPath $file).Hash -eq $hash) 'Close depended on account selection or changed settings.'
 Assert-True ($script:launches.Count -eq $launchCount) 'Close reopened an app.'
+Assert-True ($script:disconnectCount -eq $disconnectsBefore + 1) 'Step 1 did not disconnect Proton before closing it.'
+Assert-True $script:protonPresentAtDisconnect 'Proton was closed before its disconnect action.'
 Write-Output 'PASS: Close exits both apps and helpers without an account selection, and does not refresh settings.'
+
+$script:fakeProcesses=@((New-FakeProcess 110 $protonPath))
+$script:failDisconnect=$true
+$stoppedBefore=$script:stopped.Count
+Assert-Rejected { Invoke-InterfaceOperation ([pscustomobject]@{Action='Close';SettingsPath=$null;Roots=@($root)}) } 'Synthetic disconnect failure'
+Assert-True ($script:stopped.Count -eq $stoppedBefore -and $script:fakeProcesses.Count -eq 1) 'A failed disconnect still closed Proton.'
+Assert-True ((Get-FileHash -LiteralPath $file).Hash -eq $hash) 'A failed disconnect changed settings.'
+$script:failDisconnect=$false
+$retried=Invoke-InterfaceOperation ([pscustomobject]@{Action='Close';SettingsPath=$null;Roots=@($root)})
+Assert-True ($retried.Success -and $script:fakeProcesses.Count -eq 0) 'The disconnect/close action could not be retried.'
+Write-Output 'PASS: Step 1 disconnects after Discord closes, preserves Proton on a failed disconnect, and supports retry.'
 
 # Helpers whose files were removed are absent from the current inventory, and
 # a tray/client process may respawn after the first force-stop batch.

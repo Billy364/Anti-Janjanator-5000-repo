@@ -40,8 +40,7 @@ Check ($script:invocations.Count -eq $count) 'Already-disconnected state was inv
 $script:controls = @('ConnectionCardCancelButton')
 Disconnect-ProtonUi
 Check ($script:invocations[-1] -eq 'ConnectionCardCancelButton') 'Connecting state did not use Cancel.'
-Connect-ProtonUi
-Check ($script:invocations[-1] -eq 'ConnectionCardConnectButton' -and (Get-ProtonUiState) -eq 'Connected') 'Connect was not acknowledged.'
+
 $script:status = 'Translated status'
 Reject { Get-ProtonUiState }
 $script:status = 'Protected'; $script:offscreen = $true

@@ -46,6 +46,14 @@ function Start-DesktopClient {
     Start-Process -FilePath $Path -WorkingDirectory ([IO.Path]::GetDirectoryName($Path)) -WindowStyle Normal -ErrorAction Stop
 }
 
+function Disconnect-ProtonBeforeClose {
+    . (Join-Path $PSScriptRoot 'Proton-Uia.ps1')
+    Write-Host 'Disconnecting Proton VPN through its interface before closing the client...'
+    Show-ProtonUi
+    Disconnect-ProtonUi
+    Write-Host 'Proton VPN acknowledged Disconnected. Continuing normal client shutdown.'
+}
+
 function Invoke-InterfaceOperation {
     param([object]$Request)
     if ($Request.Action -notin @('Close','Refresh','LaunchProton','LaunchDiscord')) { throw 'Unknown operation.' }
@@ -93,7 +101,7 @@ function Invoke-InterfaceOperation {
         }
         $inventory = @()
         if ($roots.Count -gt 0) { $inventory = @(Get-DiscordInventory $roots) }
-        Close-DiscordAndProton $roots $inventory
+        Close-DiscordAndProton $roots $inventory -BeforeProtonClose { Disconnect-ProtonBeforeClose }
         Assert-DesktopAppsExited $roots
         return [pscustomobject]@{
             Success = $true; Action = 'Close'; Message = 'Both desktop apps have exited. You can now refresh the rules.'

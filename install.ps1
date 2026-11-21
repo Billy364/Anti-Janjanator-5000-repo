@@ -51,7 +51,7 @@ function Install-AntiJanjanator {
         $downloadsFolder = (Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -ErrorAction Stop).'{374DE290-123F-4565-9164-39C4925E467B}'
         if ([string]::IsNullOrWhiteSpace($downloadsFolder)) { throw 'Windows Downloads folder could not be resolved. Specify -InstallDirectory.' }
         $downloadsPath = [Environment]::ExpandEnvironmentVariables($downloadsFolder)
-        $Destination = Join-Path $downloadsPath 'Anti-Janjanator-5000-Proton-UIA-Prototype'
+        $Destination = Join-Path $downloadsPath 'Anti-Janjanator-5000-Disconnect-Prototype-3'
     }
     $destinationPath = [IO.Path]::GetFullPath($Destination)
     $desktopPath = [IO.Path]::GetFullPath($DesktopDirectory)
@@ -78,7 +78,7 @@ function Install-AntiJanjanator {
     if (-not (Test-Path -LiteralPath $build -PathType Leaf)) { throw 'Repository build.ps1 is missing.' }
     & $powershell -NoProfile -ExecutionPolicy Bypass -File $build
     if ($LASTEXITCODE -ne 0) { throw 'Build failed. Close any running copy of this installation before retrying. No shortcut was created.' }
-    $appFolder = Join-Path $destinationPath 'dist\Anti-Janjanator-5000-Proton-UIA-Prototype'
+    $appFolder = Join-Path $destinationPath 'dist\Anti-Janjanator-5000-Disconnect-Prototype-3'
     $app = Join-Path $appFolder 'Anti-Janjanator 5000.exe'
     if (-not (Test-Path -LiteralPath $app -PathType Leaf)) { throw 'Expected Anti-Janjanator 5000 executable is missing.' }
     $shortcutPath = Join-Path $desktopPath 'Anti-Janjanator 5000 UI Automation prototype.lnk'

@@ -375,7 +375,7 @@ function Close-AppGroup {
 }
 
 function Close-DiscordAndProton {
-    param([string[]]$Roots, [object[]]$Inventory)
+    param([string[]]$Roots, [object[]]$Inventory, [scriptblock]$BeforeProtonClose)
     # Validate both selections before requesting any app to exit.
     [void]@(Get-ProtonAppProcesses)
     [void]@(Get-DiscordAppProcesses $Roots $Inventory)
@@ -400,6 +400,7 @@ function Close-DiscordAndProton {
     if (@(& $findUpdaters).Count -gt 0) {
         throw 'Discord started updating while closing. Wait for the updater to finish and rerun.'
     }
+    if ($null -ne $BeforeProtonClose) { & $BeforeProtonClose }
     Close-AppGroup 'Proton VPN client' { Get-ProtonAppProcesses }
     Assert-AppsClosed $Roots
     Write-Host 'Shutdown verified. Discord and the Proton client are closed before writing settings.'

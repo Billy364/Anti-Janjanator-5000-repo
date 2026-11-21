@@ -98,27 +98,3 @@ function Disconnect-ProtonUi {
     elseif ($state -eq 'Connecting') { Invoke-ProtonUiButton 'ConnectionCardCancelButton' }
     Wait-ProtonUiState 'Disconnected'
 }
-
-function Exit-ProtonUiGracefully {
-    if ((Get-ProtonUiState) -ne 'Disconnected') { throw 'Proton must remain disconnected before the graceful restart.' }
-    Invoke-ProtonUiButton 'TitleBarMenuButton'
-    $timer = [Diagnostics.Stopwatch]::StartNew()
-    do {
-        $window = Get-ProtonUiWindow
-        if (Test-ProtonUiButton $window 'KebabMenuExitItem') {
-            Invoke-ProtonUiButton 'KebabMenuExitItem'
-            if (-not (Wait-AppGroupExit { Get-ProtonAppProcesses } 20)) {
-                throw 'Proton did not exit. Resolve its exit confirmation manually and retry the first step.'
-            }
-            return
-        }
-        Start-Sleep -Milliseconds 100
-    } while ($timer.Elapsed.TotalSeconds -lt 3)
-    throw 'Proton Exit menu item was unavailable. Resolve any dialogs and retry the first step.'
-}
-
-function Connect-ProtonUi {
-    $state = Get-ProtonUiState
-    if ($state -eq 'Disconnected') { Invoke-ProtonUiButton 'ConnectionCardConnectButton' }
-    Wait-ProtonUiState 'Connected' 60
-}

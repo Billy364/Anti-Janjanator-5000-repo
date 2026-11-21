@@ -1,8 +1,39 @@
-Anti-Janjanator 5000 - Proton UI Automation prototype 2
-Assembly version 20.2.0.0, based on v20.
-Retains the original interface and remembered first-time setup.
-Step 1 closes Discord, disconnects Proton through its UI, then exits Proton.
-Step 2 refreshes rules with the original guarded writer and exact backups.
-Steps 3 and 4 reconnect Proton and launch Discord after UI-state verification.
-Completed steps remain greyed out. Process completed is followed by automatic exit.
-Targets the English Proton 5.1.9 Home screen. Live routing requires validation.
+Anti-Janjanator 5000 - Disconnect-before-close prototype 3 (20.3.0.0)
+Based on main v20. Step 1 disconnects Proton through UI Automation before normal shutdown.
+Steps 2-4, first-time setup, interface, and auto-connect behavior use the main-branch version.
+Shutdown rescans for replacement Discord processes and known retired helpers.
+Verifies one full second without matching processes before reporting success.
+Completed steps stay greyed out and disabled for the rest of the run.
+Enabled steps use a purple background and white text.
+The two launch wait messages show animated dots.
+Restored the Anti-Janjanator 5000 name in the program and interface.
+Restored the original artwork and multi-size application/title-bar/tray icon.
+Website favicon, branding artwork, and example screenshots match the app again.
+Successful GUI Refresh unlocks Launch Proton VPN after 5 seconds.
+Launching Proton starts a 12-second wait before Launch Discord unlocks.
+Each launch requires a click. After the Discord step, Process completed appears
+for 2.5 seconds, then the updater closes automatically.
+Failed launches can be retried while the saved rules and backups remain in place.
+Uses the stable Proton launcher or newest client with its own working directory.
+First-launch setup is mandatory: exit Proton, select the account, and click
+Apply setup and open updater. Exit/X and errors cannot bypass setup.
+GUI Refresh enables Split tunneling in Include mode automatically, saving
+activation and Discord rules together with one exact backup. Other preferences
+are preserved, including the one-time startup/protocol/location settings.
+Recognizes omitted Proton default settings and explains off/Exclude mode.
+Refresh can create a missing/null saved Include list and enable Include mode.
+Process image lookup uses limited query rights, ignores exited processes, and
+discards pre-operation inspection results after closing the apps.
+First successful launch per Windows user configures Proton startup and
+auto-connect, Fastest country excluding Brazil, Proton Protocols/Proton
+WireGuard, and Split tunneling in Include mode (subject to Proton support).
+Select an account when more than one is saved; Proton must be exited first.
+Exact backups, guarded atomic writes/rollback, and a persistent completion
+marker prevent overwriting preferences on later launches. Main UI retained.
+Renamed executable, window title, interface heading, tray tooltip/menu, and
+Windows file product/title metadata. Discord/Proton refresh behavior unchanged.
+Live status cards, separate close and refresh buttons, disabled refresh until
+verified app exit, account picker, and exact backups.
+Embedded proportional header artwork beside the title.
+Matching multi-size application/title-bar icon and a system-tray icon with
+Open Anti-Janjanator 5000 and Exit commands.

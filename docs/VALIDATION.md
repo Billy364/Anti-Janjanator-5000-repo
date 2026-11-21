@@ -1,25 +1,12 @@
-# Interface validation — November 21, 2026
+# Interface validation — November 19, 2026
 
-Prototype 2 reuses UpdaterForm and the original first-launch setup. Step 1
-combines Discord closure, UI disconnection, and graceful Proton exit. Tests
-verify this order, retain the failed step after exit errors, reject Refresh if
-Proton reopened, and cover reconnect and launch without confirmation flags.
-An entry-point test uses an invalid action to verify worker request/result IO
-without touching live applications.
-
-UI Automation prototype 1 uses a separate entry point and interface. The
-baseline regression runner passed along with prototype form and worker tests.
-Synthetic cases cover the explicit account/restart/connection/routing choices,
-Discord-only shutdown, exact offline backups, connected-state rejection,
-reconnect retry, changed-rule rejection, and automatic completion exit. UI state
-tests cover Cancel while connecting, idempotent disconnect, hidden controls,
-unfamiliar status text, and a missing sign-in/Home status. The prototype form
-was rendered and visually checked.
-
-The implementation uses UI Automation identifiers inspected in Proton v5.1.9
-at bd8380fe92c2b07f07ee6e48858307f12780fcb9. No live connection changes, account
-writes, or traffic-routing tests were performed for this build. The prototype
-guide is docs/PROTOTYPE.md in source and README.md in the portable package.
+Disconnect-before-close prototype 3 is rebuilt from main v20. Synthetic worker
+tests verify Discord closure before UI disconnection, then normal Proton
+shutdown. Failed disconnection preserves the Proton client and permits retry.
+The main launch and refresh regressions remain in the suite. UI state tests
+exercise disconnect, cancel while connecting, and rejection of unsupported
+or inaccessible controls. Live network changes have not been tested in this
+build.
 
 V20 adds synthetic shutdown cases for a tray/client process spawning a
 replacement during termination, a process reopening during the quiet check,

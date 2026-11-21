@@ -1,56 +1,131 @@
-# Anti-Janjanator 5000 — Proton UI Automation prototype
+# Anti-Janjanator 5000
 
-This branch implements the UI Automation experiment described in
-[the supplied proposal](docs/proposals/PROPOSAL-Proton-UI-Automation.md).
+This branch builds **Disconnect-before-close prototype 3**, rebuilt from main
+v20. Step 1 disconnects Proton through its interface before the normal client
+shutdown. Steps 2–4 use the main workflow. See [prototype details](docs/PROTOTYPE.md).
+The build outputs dist/Anti-Janjanator-5000-Disconnect-Prototype-3 and
+dist/Anti-Janjanator-5000-Disconnect-Prototype-3.zip.
 
-The familiar four-button interface closes Discord, disconnects Proton through
-its UI, and exits Proton through its menu in step 1. The next buttons refresh
-the rules, reconnect Proton, and launch Discord after a Protected check. It
-targets the English Proton VPN 5.1.9 Home screen.
+A portable Windows app that refreshes Discord executable paths in Proton VPN's
+Split Tunneling **Included apps** after Discord updates.
 
-Read [the prototype guide](docs/PROTOTYPE.md) before trying it. It explains the
-settings-cache finding, required graceful restart, recovery, and live validation
-that remains to be done. Normal first-launch setup is retained.
+![Anti-Janjanator 5000 interface with example data](docs/screenshot.png)
 
-## Download and build
+The app monitors Discord and the Proton VPN desktop client. Use **Close both
+apps**, then **Refresh split tunneling rules** once both have exited. Select
+the intended account if more than one Proton account is saved on the PC.
 
-Clone the experimental branch with Git for Windows.
+- Finds Discord, PTB, and Canary installations and their helper executables.
+- Blocks refresh while matching apps are running or their status is uncertain.
+- Adds current executable paths and removes missing old Discord paths.
+- Automatically enables Split tunneling in Include mode when you click Refresh.
+- Preserves unrelated Included apps and preferences, with an exact backup for
+  every actual change.
+- Unlocks **3. Launch Proton VPN** 5 seconds after a successful refresh. After
+  you launch Proton, **4. Launch Discord** unlocks after another 12 seconds.
+  Confirm Proton is connected before launching Discord. The updater shows
+  **Process completed** and closes automatically.
+- Includes the supplied artwork as the header, application icon, and tray icon.
 
-~~~powershell
-git clone --branch prototype/proton-ui-automation https://github.com/Billy364/Anti-Janjanator-5000-repo.git Anti-Janjanator-5000-Prototype
-Set-Location .\Anti-Janjanator-5000-Prototype
+Proton's background VPN service stays running. This unofficial utility was
+checked against Proton VPN 5.1.9's settings layout; future versions may differ.
+See the [user guide](docs/USER-GUIDE.md) for setup, backup restoration, and details.
+
+## First launch
+
+The first launch configures Proton VPN once per Windows user: start with Windows
+and connect automatically; Fastest country excluding Brazil; Proton Protocols
+enabled with Proton WireGuard; and Split tunneling enabled in Include mode,
+subject to Proton's account/feature availability. Existing exclusions and
+Included apps are preserved.
+
+Choose an account if more than one is saved, and exit Proton from its tray icon.
+Click **Apply setup and open updater** once its exit is verified. First-time
+setup is required: there is no skip option, and Exit/X closes the program. The
+same updater interface opens only after successful setup. Refresh Discord's
+rules next, then use **Launch Proton VPN** to load the preferences and register
+Windows startup. Discord can stay open during the setup step.
+
+Successful setup is remembered outside the app folder. Future launches and
+newly extracted app versions skip completed setup. An explicit Refresh may
+re-enable Include mode; it leaves the other first-launch preferences alone.
+Failed or canceled setup remains pending for a later launch. See
+[first-launch details](docs/FIRST-LAUNCH.md) for backups and limitations.
+
+## One-command build and Desktop shortcut
+
+With Git for Windows installed, run this in Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/Billy364/Anti-Janjanator-5000-repo/main/install.ps1 | iex
+```
+
+This downloads and executes the bootstrap script. It clones into
+`Downloads\Anti-Janjanator-5000` (using Windows' configured Downloads folder), builds using Windows
+PowerShell 5.1 and .NET Framework, and creates **Anti-Janjanator 5000** on your Desktop (including a redirected/OneDrive Desktop). Open the
+shortcut to launch the EXE when ready. The bootstrap does not launch the app,
+modify Proton settings, request administrator access, or change machine-wide
+execution policy. First launch of the app still performs the setup described above.
+
+Rerunning fast-forwards a clean installation checkout and rebuilds it. If the
+previously named Downloads checkout is the only one present, the installer
+updates it in place and creates the renamed Desktop shortcut. Local
+changes, a different origin/branch, or divergent history stop the update.
+Close a running copy before rebuilding. Git and the .NET compiler must already
+be installed; the bootstrap does not install prerequisites.
+
+To inspect before running, download `install.ps1` and read it first. The saved
+script also accepts `-InstallDirectory`, `-ShortcutDirectory`, `-RepositoryUrl`,
+and `-Branch` for custom locations and branch testing.
+
+## Build and run
+
+Requires 64-bit Windows, Windows PowerShell 5.1, and .NET Framework 4.x with its
+C# compiler. No NuGet packages or external libraries are needed.
+
+From Windows PowerShell in this repository:
+
+```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
-~~~
+```
 
-Requires 64-bit Windows, Windows PowerShell 5.1, and the .NET Framework 4.x
-compiler. The build uses the Windows UI Automation assemblies.
-
-The portable outputs are
-`dist\Anti-Janjanator-5000-Proton-UIA-Prototype\Anti-Janjanator 5000.exe` and
-`dist\Anti-Janjanator-5000-Proton-UIA-Prototype-2.zip`.
-Extract the complete ZIP and keep the workers beside the executable.
+Open `dist\Anti-Janjanator-5000\Anti-Janjanator 5000.exe`. Keep the generated
+folder together: the two PowerShell workers are needed at runtime. The build
+also creates `dist\Anti-Janjanator-5000-v20.zip` for sharing. Builds are unsigned.
 
 ## Verify
 
-~~~powershell
+```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test.ps1
-~~~
+```
 
-Tests use synthetic settings and mocked controls. The fixture form is rendered
-under `artifacts/`. Read [validation notes](docs/VALIDATION.md) for coverage.
+This builds the app, runs first-launch, UI policy, and synthetic worker tests,
+and renders the forms using example data. Tests do not close real Discord/Proton processes or
+edit real account settings. Temporary fixtures and previews go in `artifacts/`.
+See [validation notes](docs/VALIDATION.md) for the scope and limitations.
 
-## Implementation
+If a newly signed-in account has no saved split-tunneling settings yet, the app
+shows whether Split tunneling is off or still uses Exclude mode. After both apps
+exit, click Refresh: it enables Include mode and creates the Discord entries in
+one saved update with an exact backup. There is no manual Proton mode setup. See
+[troubleshooting](docs/TROUBLESHOOTING.md) for the former unsupported-format error
+and uncertain process status.
 
-- `src/PrototypeWindow.cs` contains the bounded worker adapter and prototype
-  entry point, reusing the main application's UpdaterForm.
-- `src/PrototypeWorker.ps1` serializes actions, records per-run state, and
-  retains the original guarded writer for offline rule updates.
-- `src/Proton-Uia.ps1` discovers the verified client and invokes its named UI
-  controls with state checks and deadlines.
-- `src/UpdaterWindow.cs`, `src/UpdaterWorker.ps1`, and
-  `src/Update-DiscordRules.ps1` retain the v20 baseline logic for reuse and tests.
-- `src/FirstLaunchSetup.cs` retains first-launch setup.
+The launch buttons also unlock when a refresh finds the rules already current.
+If a launch fails, the activity log shows the error and the same button can be
+retried. Check the connection in Proton before clicking **Launch Discord**.
 
-The [prototype guide](docs/PROTOTYPE.md) includes pinned source references and
-the live evaluation plan. Account settings, run records, and backups belong
-outside the repository and distributable.
+## Repository layout
+
+| Path | Purpose |
+| --- | --- |
+| `src/UpdaterWindow.cs` | Windows Forms interface and process inspection |
+| `src/FirstLaunchSetup.cs` | One-time setup form, settings transaction, completion marker |
+| `src/UpdaterWorker.ps1` | Close, refresh, and app launch operations |
+| `src/Update-DiscordRules.ps1` | Discovery, validation, and atomic settings updates |
+| `assets/` | Embedded header PNG and multi-resolution ICO |
+| `tests/` | Synthetic regression tests and fixture renderer |
+| `build.ps1` | Compile and package the portable Windows app |
+
+Do not commit account settings, backups, request/result records, or logs.
+Generated builds and local test artifacts are excluded by `.gitignore`.

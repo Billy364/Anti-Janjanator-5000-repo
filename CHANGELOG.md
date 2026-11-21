@@ -1,20 +1,12 @@
 # Changelog
 
-## UI Automation prototype 2
+## Disconnect-before-close prototype 3
 
-- Restore the familiar numbered interface and retained first-launch setup.
-  Step 1 now closes Discord, disconnects Proton, and exits Proton through its
-  menu in one action. Refresh remains separate and requires verified app exit.
-- Remove the experiment confirmation checkboxes. Reconnect and Discord launch
-  retain independent UI-state and saved-rule checks.
-
-## UI Automation prototype 1
-
-- Added a separate four-step prototype interface and bounded automation worker.
-- Use Proton UI controls for disconnect/cancel and reconnect. Refresh requires
-  the user's graceful-restart choice and retains the original atomic writer.
-- Gate Discord launch on Protected, current saved rules, and manual
-  account/connection/routing verification. Keep failures retryable.
+- Rebuild from main v20 and replace the previous UI Automation prototype.
+- Add UI disconnect/cancel and acknowledgement to step 1, after Discord closes
+  and before the original Proton shutdown routine.
+- Restore normal Proton launch, auto-connect, rule refresh, first-time setup,
+  and the main interface. Automation is used only during step 1.
 
 ## v20
 
