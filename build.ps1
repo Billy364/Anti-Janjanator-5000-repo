@@ -4,25 +4,26 @@ param()
 $ErrorActionPreference = 'Stop'
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 if (-not (Test-Path -LiteralPath $compiler)) { throw 'The 64-bit .NET Framework C# compiler is required.' }
-$destination = Join-Path $PSScriptRoot 'dist\Anti-Janjanator-5000'
+$destination = Join-Path $PSScriptRoot 'dist\Anti-Janjanator-5000-Proton-UIA-Prototype'
 [void][IO.Directory]::CreateDirectory($destination)
 $executable = Join-Path $destination 'Anti-Janjanator 5000.exe'
-& $compiler /nologo /target:winexe /platform:x64 /optimize+ "/out:$executable" `
+& $compiler /nologo /target:winexe /platform:x64 /optimize+ /main:DiscordProtonUpdater.PrototypeProgram "/out:$executable" `
     /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll `
     "/win32icon:$PSScriptRoot\assets\AppIcon.ico" `
     "/resource:$PSScriptRoot\assets\HeaderArtwork.png,HeaderArtwork.png" `
     "/resource:$PSScriptRoot\assets\AppIcon.ico,AppIcon.ico" `
-    "$PSScriptRoot\src\UpdaterWindow.cs" "$PSScriptRoot\src\FirstLaunchSetup.cs"
+    "$PSScriptRoot\src\UpdaterWindow.cs" "$PSScriptRoot\src\FirstLaunchSetup.cs" "$PSScriptRoot\src\PrototypeWindow.cs"
 if ($LASTEXITCODE -ne 0) { throw "C# compilation failed ($LASTEXITCODE). Close any running copy of this build before rebuilding." }
 Copy-Item -LiteralPath "$PSScriptRoot\src\UpdaterWindow.cs", "$PSScriptRoot\src\FirstLaunchSetup.cs", "$PSScriptRoot\src\UpdaterWorker.ps1", "$PSScriptRoot\src\Update-DiscordRules.ps1", "$PSScriptRoot\VERSION.txt" -Destination $destination
+Copy-Item -LiteralPath "$PSScriptRoot\src\PrototypeWindow.cs", "$PSScriptRoot\src\PrototypeWorker.ps1", "$PSScriptRoot\src\Proton-Uia.ps1" -Destination $destination
 Copy-Item -LiteralPath "$PSScriptRoot\scripts\Open Anti-Janjanator 5000.cmd" -Destination $destination
-Copy-Item -LiteralPath "$PSScriptRoot\docs\USER-GUIDE.md" -Destination (Join-Path $destination 'README.md')
+Copy-Item -LiteralPath "$PSScriptRoot\docs\PROTOTYPE.md" -Destination (Join-Path $destination 'README.md')
 Copy-Item -LiteralPath "$PSScriptRoot\docs\VALIDATION.md" -Destination $destination
 Copy-Item -LiteralPath "$PSScriptRoot\docs\FIRST-LAUNCH.md" -Destination $destination
 Copy-Item -LiteralPath "$PSScriptRoot\docs\TROUBLESHOOTING.md" -Destination $destination
 [void][IO.Directory]::CreateDirectory((Join-Path $destination 'assets'))
 Copy-Item -LiteralPath "$PSScriptRoot\assets\HeaderArtwork.png", "$PSScriptRoot\assets\AppIcon.ico" -Destination (Join-Path $destination 'assets')
-$archive = Join-Path $PSScriptRoot 'dist\Anti-Janjanator-5000-v20.zip'
+$archive = Join-Path $PSScriptRoot 'dist\Anti-Janjanator-5000-Proton-UIA-Prototype-1.zip'
 Compress-Archive -LiteralPath $destination -DestinationPath $archive -Force
 Write-Output "Built: $executable"
 Write-Output "Packaged: $archive"

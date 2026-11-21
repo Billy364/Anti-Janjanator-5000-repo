@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [string]$RepositoryUrl = 'https://github.com/Billy364/Anti-Janjanator-5000-repo.git',
-    [string]$Branch = 'main',
+    [string]$Branch = 'prototype/proton-ui-automation',
     [string]$InstallDirectory,
     [string]$ShortcutDirectory = ([Environment]::GetFolderPath('Desktop'))
 )
@@ -51,13 +51,7 @@ function Install-AntiJanjanator {
         $downloadsFolder = (Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -ErrorAction Stop).'{374DE290-123F-4565-9164-39C4925E467B}'
         if ([string]::IsNullOrWhiteSpace($downloadsFolder)) { throw 'Windows Downloads folder could not be resolved. Specify -InstallDirectory.' }
         $downloadsPath = [Environment]::ExpandEnvironmentVariables($downloadsFolder)
-        $Destination = Join-Path $downloadsPath 'Anti-Janjanator-5000'
-        $previousDestination = Join-Path $downloadsPath 'Democracy-Enforcer-5000'
-        # Reuse a previous checkout so updates still go through the checks below.
-        if (-not (Test-Path -LiteralPath $Destination) -and
-            (Test-Path -LiteralPath (Join-Path $previousDestination '.git') -PathType Container)) {
-            $Destination = $previousDestination
-        }
+        $Destination = Join-Path $downloadsPath 'Anti-Janjanator-5000-Proton-UIA-Prototype'
     }
     $destinationPath = [IO.Path]::GetFullPath($Destination)
     $desktopPath = [IO.Path]::GetFullPath($DesktopDirectory)
@@ -84,10 +78,10 @@ function Install-AntiJanjanator {
     if (-not (Test-Path -LiteralPath $build -PathType Leaf)) { throw 'Repository build.ps1 is missing.' }
     & $powershell -NoProfile -ExecutionPolicy Bypass -File $build
     if ($LASTEXITCODE -ne 0) { throw 'Build failed. Close any running copy of this installation before retrying. No shortcut was created.' }
-    $appFolder = Join-Path $destinationPath 'dist\Anti-Janjanator-5000'
+    $appFolder = Join-Path $destinationPath 'dist\Anti-Janjanator-5000-Proton-UIA-Prototype'
     $app = Join-Path $appFolder 'Anti-Janjanator 5000.exe'
     if (-not (Test-Path -LiteralPath $app -PathType Leaf)) { throw 'Expected Anti-Janjanator 5000 executable is missing.' }
-    $shortcutPath = Join-Path $desktopPath 'Anti-Janjanator 5000.lnk'
+    $shortcutPath = Join-Path $desktopPath 'Anti-Janjanator 5000 UI Automation prototype.lnk'
     $shell = New-Object -ComObject WScript.Shell
     try {
         $shortcut = $shell.CreateShortcut($shortcutPath)
@@ -95,7 +89,7 @@ function Install-AntiJanjanator {
             $shortcut.TargetPath = $app
             $shortcut.WorkingDirectory = $appFolder
             $shortcut.IconLocation = $app + ',0'
-            $shortcut.Description = 'Launch Anti-Janjanator 5000'
+            $shortcut.Description = 'Launch Anti-Janjanator 5000 UI Automation prototype'
             $shortcut.Save()
         } finally { if ($null -ne $shortcut) { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($shortcut) } }
     } finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($shell) }

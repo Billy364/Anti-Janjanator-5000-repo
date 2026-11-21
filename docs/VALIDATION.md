@@ -1,4 +1,18 @@
-# Interface validation — November 19, 2026
+# Interface validation — November 21, 2026
+
+UI Automation prototype 1 uses a separate entry point and interface. The
+baseline regression runner passed along with prototype form and worker tests.
+Synthetic cases cover the explicit account/restart/connection/routing choices,
+Discord-only shutdown, exact offline backups, connected-state rejection,
+reconnect retry, changed-rule rejection, and automatic completion exit. UI state
+tests cover Cancel while connecting, idempotent disconnect, hidden controls,
+unfamiliar status text, and a missing sign-in/Home status. The prototype form
+was rendered and visually checked.
+
+The implementation uses UI Automation identifiers inspected in Proton v5.1.9
+at bd8380fe92c2b07f07ee6e48858307f12780fcb9. No live connection changes, account
+writes, or traffic-routing tests were performed for this build. The prototype
+guide is docs/PROTOTYPE.md in source and README.md in the portable package.
 
 V20 adds synthetic shutdown cases for a tray/client process spawning a
 replacement during termination, a process reopening during the quiet check,

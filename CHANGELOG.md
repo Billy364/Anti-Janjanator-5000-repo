@@ -1,5 +1,13 @@
 # Changelog
 
+## UI Automation prototype 1
+
+- Added a separate four-step prototype interface and bounded automation worker.
+- Use Proton UI controls for disconnect/cancel and reconnect. Refresh requires
+  the user's graceful-restart choice and retains the original atomic writer.
+- Gate Discord launch on Protected, current saved rules, and manual
+  account/connection/routing verification. Keep failures retryable.
+
 ## v20
 
 - Rescan during shutdown and stop verified replacement Discord processes.
