@@ -1,6 +1,7 @@
 #requires -Version 5.1
 [CmdletBinding()]
 param([string]$RequestPath)
+$prototypeInputPath = $RequestPath
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'UpdaterWorker.ps1')
@@ -38,7 +39,6 @@ function Invoke-PrototypeOperation {
     $state = $null
     if (Test-Path -LiteralPath $StatePath) { $state = [IO.File]::ReadAllText($StatePath) | ConvertFrom-Json }
     if ($Request.Action -eq 'Disconnect') {
-        if (-not $Request.AccountConfirmed) { throw 'Confirm that the selected account matches the account signed into Proton.' }
         [void](Read-ProtonSettings -Path $Request.SettingsPath -EnableSplitTunneling)
         $roots = @(Resolve-DiscordRoots $Request.Roots)
         $inventory = @(Get-DiscordInventory $roots)
@@ -53,6 +53,8 @@ function Invoke-PrototypeOperation {
         }
         Close-AppGroup 'Discord' $findDiscord
         Disconnect-ProtonUi
+        Exit-ProtonUiGracefully
+        Assert-DesktopAppsExited $roots
         Assert-PrototypeDiscordClosed $roots
         $state = [pscustomobject]@{
             SettingsPath = [IO.Path]::GetFullPath($Request.SettingsPath)
@@ -60,19 +62,15 @@ function Invoke-PrototypeOperation {
             Disconnected = $true; RulesSaved = $false; DiscordPath = $null; Connected = $false
         }
         Save-PrototypeState $state $StatePath
-        return [pscustomobject]@{ Success=$true; Message='Discord is closed. Proton acknowledged Disconnected through its interface.' }
+        return [pscustomobject]@{ Success=$true; Message='Discord is closed. Proton disconnected through its interface and exited through its menu. You can refresh the rules.' }
     }
     if ($null -eq $state -or -not $state.Disconnected) { throw 'Complete step 1 before continuing.' }
-    if (-not [string]::Equals($state.SettingsPath, [IO.Path]::GetFullPath($Request.SettingsPath), [StringComparison]::OrdinalIgnoreCase)) {
+    if (-not [string]::IsNullOrWhiteSpace($Request.SettingsPath) -and
+        -not [string]::Equals($state.SettingsPath, [IO.Path]::GetFullPath($Request.SettingsPath), [StringComparison]::OrdinalIgnoreCase)) {
         throw 'Account selection changed. Start a new prototype run.'
     }
     Assert-PrototypeDiscordClosed $state.Roots
     if ($Request.Action -eq 'Refresh') {
-        if (-not $Request.AllowGracefulRestart) { throw 'Select the explicit graceful-restart option before refreshing.' }
-        if (@(Get-ProtonAppProcesses).Count -gt 0) {
-            Show-ProtonUi
-            Exit-ProtonUiGracefully
-        }
         # Reuse the original independently guarded atomic writer, only after exit.
         $result = Invoke-InterfaceOperation ([pscustomobject]@{
             Action='Refresh'; SettingsPath=$state.SettingsPath; Roots=$state.Roots
@@ -81,13 +79,12 @@ function Invoke-PrototypeOperation {
         $state.RulesSaved = $true
         $state.Connected = $false
         Save-PrototypeState $state $StatePath
-        return [pscustomobject]@{ Success=$true; Message='Rules saved after Proton exited through its own menu. Click Reconnect to reload them.'
-            BackupPath=$result.BackupPath }
+        return [pscustomobject]@{ Success=$true; Message='Rules refreshed. Reconnect Proton VPN when the next step unlocks.'
+            BackupPath=$result.BackupPath; Total=$result.Total; DiscordPath=$result.DiscordPath }
     }
     if (-not $state.RulesSaved) { throw 'Refresh the rules before reconnecting or launching Discord.' }
     Assert-PrototypeRulesCurrent $state
     if ($Request.Action -eq 'Reconnect') {
-        if (-not $Request.DefaultConnectionConfirmed) { throw 'Confirm reconnecting using Proton connection-card preferences.' }
         Show-ProtonUi
         Connect-ProtonUi
         Assert-PrototypeRulesCurrent $state
@@ -96,7 +93,7 @@ function Invoke-PrototypeOperation {
         Save-PrototypeState $state $StatePath
         return [pscustomobject]@{ Success=$true; Message='Proton acknowledged Protected. Verify the account, server, and desired routing before launching Discord.' }
     }
-    if (-not $state.Connected -or -not $Request.RoutingConfirmed) { throw 'Verify the Proton connection and desired routing before launching Discord.' }
+    if (-not $state.Connected) { throw 'Reconnect Proton before launching Discord.' }
     if ((Get-ProtonUiState) -ne 'Connected') { throw 'Proton is no longer Protected. Reconnect and verify it before retrying.' }
     Assert-PrototypeRulesCurrent $state
     Start-DesktopClient $state.DiscordPath
@@ -106,7 +103,7 @@ function Invoke-PrototypeOperation {
 if ($MyInvocation.InvocationName -ne '.') {
     $mutex = $null; $owned = $false; $resultPath = $null
     try {
-        $requestFile = (Get-Item -LiteralPath $RequestPath).FullName
+        $requestFile = (Get-Item -LiteralPath $prototypeInputPath).FullName
         $folder = [IO.Path]::GetDirectoryName($requestFile)
         $resultPath = Join-Path $folder 'result.json'
         $request = [IO.File]::ReadAllText($requestFile) | ConvertFrom-Json

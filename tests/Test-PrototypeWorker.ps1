@@ -15,6 +15,7 @@ $script:discordRunning = $true
 $script:connection = 'Connected'
 $script:events = @()
 $script:failConnect = $false
+$script:failExit = $false
 $session = [Diagnostics.Process]::GetCurrentProcess().SessionId
 $proton = [pscustomobject]@{ Id=999; ProcessName='ProtonVPN.Client'; Path=(Join-Path $env:ProgramFiles 'Proton\VPN\v5.1.9\ProtonVPN.Client.exe'); SessionId=$session }
 function Get-ProtonAppProcesses { if ($script:protonRunning) { $proton } }
@@ -37,6 +38,7 @@ function Get-ProtonUiState { $script:connection }
 function Disconnect-ProtonUi { $script:events += 'Disconnect'; $script:connection = 'Disconnected' }
 function Exit-ProtonUiGracefully {
     if ($script:connection -ne 'Disconnected') { throw 'Proton was not disconnected before exit.' }
+    if ($script:failExit) { throw 'Synthetic exit failure.' }
     $script:events += 'GracefulExit'; $script:protonRunning = $false
 }
 function Connect-ProtonUi {
@@ -56,39 +58,38 @@ function Reject([scriptblock]$Action, [string]$Text) {
     Check ($errorText -like ('*' + $Text + '*')) ('Expected ' + $Text + ', got ' + $errorText)
 }
 $request = [pscustomobject]@{
-    Action='Refresh'; SettingsPath=$file; Roots=@($root); AccountConfirmed=$true
-    AllowGracefulRestart=$false; DefaultConnectionConfirmed=$false; RoutingConfirmed=$false
+    Action='Refresh'; SettingsPath=$file; Roots=@($root)
 }
 Reject { Invoke-PrototypeOperation $request $statePath } 'Complete step 1'
-$request.Action = 'Disconnect'; $request.AccountConfirmed = $false
-Reject { Invoke-PrototypeOperation $request $statePath } 'Confirm'
-Check ($script:events.Count -eq 0) 'Unconfirmed action touched an app.'
-$request.AccountConfirmed = $true
+$request.Action = 'Disconnect'; $script:failExit = $true
+Reject { Invoke-PrototypeOperation $request $statePath } 'Synthetic exit failure'
+Check (-not (Test-Path $statePath) -and [IO.File]::ReadAllText($file) -ceq $original) 'Failed close advanced the workflow or wrote rules.'
+$script:failExit = $false
+$script:events = @()
 $result = Invoke-PrototypeOperation $request $statePath
-Check ($result.Success -and $script:protonRunning -and -not $script:discordRunning -and $script:connection -eq 'Disconnected') 'Disconnect failed or terminated Proton.'
+Check ($result.Success -and -not $script:protonRunning -and -not $script:discordRunning -and $script:connection -eq 'Disconnected') 'Combined close did not disconnect and exit Proton.'
+Check (($script:events -join ',') -eq 'Show,CloseDiscord,Disconnect,GracefulExit') 'Step 1 used the wrong close/disconnect/exit sequence.'
 Check ([IO.File]::ReadAllText($file) -ceq $original) 'Disconnect changed account settings.'
 $request.Action = 'Refresh'
-Reject { Invoke-PrototypeOperation $request $statePath } 'explicit graceful-restart'
-Check ($script:protonRunning -and [IO.File]::ReadAllText($file) -ceq $original) 'Unconfirmed refresh changed the client or settings.'
-$request.AllowGracefulRestart = $true
+$script:protonRunning = $true
 $script:connection = 'Connected'
-Reject { Invoke-PrototypeOperation $request $statePath } 'not disconnected'
-$script:connection = 'Disconnected'
+Reject { Invoke-PrototypeOperation $request $statePath } 'running'
+Check ([IO.File]::ReadAllText($file) -ceq $original) 'Refresh wrote rules while Proton was open.'
+$script:protonRunning = $false; $script:connection = 'Disconnected'
 $result = Invoke-PrototypeOperation $request $statePath
 Check ($result.Success -and -not $script:protonRunning -and (Test-Path $result.BackupPath)) 'Graceful restart refresh failed.'
 Check ([IO.File]::ReadAllText($result.BackupPath) -ceq $original) 'Backup differs from original.'
 $savedHash = (Get-FileHash $file).Hash
 $request.Action = 'Reconnect'
-Reject { Invoke-PrototypeOperation $request $statePath } 'Confirm reconnecting'
-$request.DefaultConnectionConfirmed = $true; $script:failConnect = $true
+$request.SettingsPath = $null
+$script:failConnect = $true
 Reject { Invoke-PrototypeOperation $request $statePath } 'Synthetic reconnect failure'
 Check ((Get-FileHash $file).Hash -eq $savedHash) 'Reconnect failure rewrote settings.'
 $script:failConnect = $false
 $result = Invoke-PrototypeOperation $request $statePath
 Check ($result.Success -and $script:connection -eq 'Connected') 'Reconnect retry failed.'
 $request.Action = 'LaunchDiscord'
-Reject { Invoke-PrototypeOperation $request $statePath } 'Verify the Proton'
-$request.RoutingConfirmed = $true; $script:connection = 'Disconnected'
+$script:connection = 'Disconnected'
 Reject { Invoke-PrototypeOperation $request $statePath } 'no longer Protected'
 $script:connection = 'Connected'
 $result = Invoke-PrototypeOperation $request $statePath
@@ -96,4 +97,4 @@ Check ($result.Success -and $script:events[-1] -eq 'LaunchDiscord') 'Verified la
 Check ((Get-FileHash $file).Hash -eq $savedHash) 'Launch rewrote settings.'
 [IO.File]::WriteAllText($file, $original)
 Reject { Invoke-PrototypeOperation $request $statePath } 'rules or Discord files changed'
-Write-Output 'PASS: UI disconnect retains Proton, restart requires opt-in, offline rules use exact backups, reconnect retries preserve rules, and launch requires Protected plus routing confirmation.'
+Write-Output 'PASS: Step 1 closes Discord, disconnects and exits Proton in order, failures keep Refresh locked, and rules/reconnect/launch retain their checks without confirmation flags.'

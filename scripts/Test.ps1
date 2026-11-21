@@ -9,14 +9,13 @@ $run = Join-Path $repository ('artifacts\tests-' + [Guid]::NewGuid().ToString('N
 $app = Join-Path $repository 'dist\Anti-Janjanator-5000-Proton-UIA-Prototype\Anti-Janjanator 5000.exe'
 Copy-Item -LiteralPath $app -Destination $run
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-foreach ($name in @('GuiPolicyTests','HeaderPreview','FirstLaunchSetupTests','CompatibilityTests','PrototypeFormTests')) {
+foreach ($name in @('GuiPolicyTests','HeaderPreview','FirstLaunchSetupTests','CompatibilityTests')) {
     $test = Join-Path $run ($name + '.exe')
     & $compiler /nologo /target:exe /platform:x64 "/out:$test" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll "/reference:$app" (Join-Path $repository "tests\$name.cs")
     if ($LASTEXITCODE -ne 0) { throw "Failed to compile $name." }
     if ($name -eq 'HeaderPreview') { & $test (Join-Path $run 'preview.png') }
     elseif ($name -eq 'FirstLaunchSetupTests') { & $test (Join-Path $run 'first-launch') }
     elseif ($name -eq 'CompatibilityTests') { & $test (Join-Path $run 'compat') }
-    elseif ($name -eq 'PrototypeFormTests') { & $test (Join-Path $run 'prototype.png') }
     else { & $test }
     if ($LASTEXITCODE -ne 0) { throw "$name failed." }
 }
@@ -27,4 +26,6 @@ if ($LASTEXITCODE -ne 0) { throw 'Worker regression tests failed.' }
 if ($LASTEXITCODE -ne 0) { throw 'Prototype worker tests failed.' }
 & $powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repository 'tests\Test-ProtonUia.ps1') -ModulePath (Join-Path $repository 'src\Proton-Uia.ps1')
 if ($LASTEXITCODE -ne 0) { throw 'UI Automation state tests failed.' }
+& $powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repository 'tests\Test-PrototypeEntryPoint.ps1') -WorkerPath (Join-Path $repository 'src\PrototypeWorker.ps1') -RunFolder (Join-Path $run 'prototype-entry')
+if ($LASTEXITCODE -ne 0) { throw 'Prototype entry-point test failed.' }
 Write-Output "All checks passed. Artifacts: $run"

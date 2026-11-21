@@ -1,5 +1,13 @@
 # Changelog
 
+## UI Automation prototype 2
+
+- Restore the familiar numbered interface and retained first-launch setup.
+  Step 1 now closes Discord, disconnects Proton, and exits Proton through its
+  menu in one action. Refresh remains separate and requires verified app exit.
+- Remove the experiment confirmation checkboxes. Reconnect and Discord launch
+  retain independent UI-state and saved-rule checks.
+
 ## UI Automation prototype 1
 
 - Added a separate four-step prototype interface and bounded automation worker.

@@ -2,14 +2,14 @@
 
 These instructions apply to the entire Anti-Janjanator 5000 repository.
 On prototype/proton-ui-automation, also read docs/PROTOTYPE.md. The branch
-builds the PrototypeProgram entry point and its separate four-step interface.
-The prototype uses UI Automation for disconnect/reconnect and an explicit
-graceful-exit choice for offline settings writes. It must never force-stop
+builds the PrototypeProgram entry point using the existing UpdaterForm.
+Step 1 closes Discord, disconnects Proton through UI Automation, and exits
+Proton through its menu in one action. It must never force-stop
 Proton as an automation fallback. Keep the first-launch transaction and
 original atomic-writer guards. Test through scripts/Test.ps1 with simulated
 clients. Live network changes require an explicitly controlled test.
 The branch build output is dist/Anti-Janjanator-5000-Proton-UIA-Prototype and
-dist/Anti-Janjanator-5000-Proton-UIA-Prototype-1.zip. Production instructions
+dist/Anti-Janjanator-5000-Proton-UIA-Prototype-2.zip. Production instructions
 below describe the retained v20 baseline classes and regression coverage.
 Read [README.md](README.md), [the user guide](docs/USER-GUIDE.md), and
 [validation notes](docs/VALIDATION.md) before changing app behavior.

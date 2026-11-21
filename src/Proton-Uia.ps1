@@ -108,13 +108,13 @@ function Exit-ProtonUiGracefully {
         if (Test-ProtonUiButton $window 'KebabMenuExitItem') {
             Invoke-ProtonUiButton 'KebabMenuExitItem'
             if (-not (Wait-AppGroupExit { Get-ProtonAppProcesses } 20)) {
-                throw 'Proton did not exit. Resolve its exit confirmation manually and retry Refresh.'
+                throw 'Proton did not exit. Resolve its exit confirmation manually and retry the first step.'
             }
             return
         }
         Start-Sleep -Milliseconds 100
     } while ($timer.Elapsed.TotalSeconds -lt 3)
-    throw 'Proton Exit menu item was unavailable. Resolve any dialogs and retry Refresh.'
+    throw 'Proton Exit menu item was unavailable. Resolve any dialogs and retry the first step.'
 }
 
 function Connect-ProtonUi {

@@ -1,10 +1,8 @@
-Anti-Janjanator 5000 - Proton UI Automation prototype 1
-Assembly version 20.1.0.0, based on v20.
-Targets the English Proton VPN 5.1.9 Home screen.
-UI Automation disconnect/cancel and reconnect with acknowledged states.
-Explicit graceful-restart option before original guarded offline rule writes.
-Explicit account, connection-preference, and routing verification.
-150-second automation worker deadline and retryable steps.
-Source included. Synthetic tests are in the prototype branch.
-Live routing still requires validation.
-Read README.md in the portable folder before trying the prototype.
+Anti-Janjanator 5000 - Proton UI Automation prototype 2
+Assembly version 20.2.0.0, based on v20.
+Retains the original interface and remembered first-time setup.
+Step 1 closes Discord, disconnects Proton through its UI, then exits Proton.
+Step 2 refreshes rules with the original guarded writer and exact backups.
+Steps 3 and 4 reconnect Proton and launch Discord after UI-state verification.
+Completed steps remain greyed out. Process completed is followed by automatic exit.
+Targets the English Proton 5.1.9 Home screen. Live routing requires validation.

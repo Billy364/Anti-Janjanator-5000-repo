@@ -1,5 +1,12 @@
 # Interface validation — November 21, 2026
 
+Prototype 2 reuses UpdaterForm and the original first-launch setup. Step 1
+combines Discord closure, UI disconnection, and graceful Proton exit. Tests
+verify this order, retain the failed step after exit errors, reject Refresh if
+Proton reopened, and cover reconnect and launch without confirmation flags.
+An entry-point test uses an invalid action to verify worker request/result IO
+without touching live applications.
+
 UI Automation prototype 1 uses a separate entry point and interface. The
 baseline regression runner passed along with prototype form and worker tests.
 Synthetic cases cover the explicit account/restart/connection/routing choices,

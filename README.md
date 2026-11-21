@@ -3,11 +3,10 @@
 This branch implements the UI Automation experiment described in
 [the supplied proposal](docs/proposals/PROPOSAL-Proton-UI-Automation.md).
 
-The four-step prototype closes Discord and disconnects Proton through its UI,
-refreshes rules after an explicitly chosen graceful Proton exit, reconnects
-through Proton's connection card, and gates Discord launch on Protected plus
-manual account/connection/routing verification. It targets the English Proton
-VPN 5.1.9 Home screen.
+The familiar four-button interface closes Discord, disconnects Proton through
+its UI, and exits Proton through its menu in step 1. The next buttons refresh
+the rules, reconnect Proton, and launch Discord after a Protected check. It
+targets the English Proton VPN 5.1.9 Home screen.
 
 Read [the prototype guide](docs/PROTOTYPE.md) before trying it. It explains the
 settings-cache finding, required graceful restart, recovery, and live validation
@@ -28,7 +27,7 @@ compiler. The build uses the Windows UI Automation assemblies.
 
 The portable outputs are
 `dist\Anti-Janjanator-5000-Proton-UIA-Prototype\Anti-Janjanator 5000.exe` and
-`dist\Anti-Janjanator-5000-Proton-UIA-Prototype-1.zip`.
+`dist\Anti-Janjanator-5000-Proton-UIA-Prototype-2.zip`.
 Extract the complete ZIP and keep the workers beside the executable.
 
 ## Verify
@@ -42,8 +41,8 @@ under `artifacts/`. Read [validation notes](docs/VALIDATION.md) for coverage.
 
 ## Implementation
 
-- `src/PrototypeWindow.cs` contains the four-step form, bounded worker bridge,
-  and prototype entry point.
+- `src/PrototypeWindow.cs` contains the bounded worker adapter and prototype
+  entry point, reusing the main application's UpdaterForm.
 - `src/PrototypeWorker.ps1` serializes actions, records per-run state, and
   retains the original guarded writer for offline rule updates.
 - `src/Proton-Uia.ps1` discovers the verified client and invokes its named UI
